@@ -2,7 +2,27 @@
 
 ## 🚀 For First Time Setup (After Cloning)
 
-### Backend Setup
+### Quick Setup (Recommended - Installs Everything)
+
+**Windows:**
+```bash
+setup.bat
+```
+
+**Linux/Mac:**
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+This will automatically:
+- Create Python virtual environment
+- Install all backend dependencies (including TensorFlow, Firebase Admin, etc.)
+- Install all frontend dependencies
+
+### Manual Setup (Alternative)
+
+#### Backend Setup
 ```bash
 cd backend
 python -m venv venv
@@ -12,7 +32,7 @@ pip install -r requirements.txt
 # Create .env file with your credentials
 ```
 
-### Frontend Setup
+#### Frontend Setup
 ```bash
 cd frontend
 npm install
@@ -51,8 +71,19 @@ git push -u origin main
 ```bash
 git clone https://github.com/Abdullahb11/DiagnoVision.git
 cd DiagnoVision
-# Follow "For First Time Setup" above
+
+# Windows
+setup.bat
+
+# Linux/Mac
+chmod +x setup.sh
+./setup.sh
 ```
+
+After running the setup script:
+1. Backend: Copy `backend/.env.example` to `backend/.env` and fill in your configuration
+2. Backend: Place your model files in `backend/models/` directory
+3. Frontend: Update `frontend/src/config/firebase.js` and `supabase.js` with your credentials
 
 ---
 
