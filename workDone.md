@@ -1,0 +1,612 @@
+# DiagnoVision Project - Complete Status Report
+
+**Last Updated:** January 2025
+
+---
+
+## 🚀 QUICK START - Resuming Work
+
+**To resume work, read this file and the project structure. Then say:**
+> "Read `workDone.md` and scan the project structure. We need to [next task]."
+
+**Current Status:** ✅ Glaucoma Model Integrated & Working | ⏳ DR Model Pending
+
+**What Works:**
+- ✅ User authentication (Firebase)
+- ✅ Patient/Doctor signup with profile creation
+- ✅ Image upload and Glaucoma analysis
+- ✅ GradCAM visualization (3 images: original, heatmap, overlay)
+- ✅ Results stored in Firebase and Supabase
+
+**Next Priority:** DR Model Integration (needs training notebook and model file)
+
+---
+
+## 📋 Project Overview
+
+**DiagnoVision** is a medical image analysis platform for **Glaucoma** and **Diabetic Retinopathy** detection using ML models.
+
+**Tech Stack:**
+- **Frontend:** React.js 18.2.0 + Vite 5.0.8 + Tailwind CSS 3.3.6
+- **Backend:** FastAPI 0.104.1 + PyTorch 2.9.1
+- **Authentication:** Firebase Auth (email/password only)
+- **Database:** 
+  - Firebase Firestore (user data, results, profiles)
+  - Supabase (image storage + metadata)
+
+**Project Structure:**
+```
+DiagnoVision/
+├── frontend/          # React.js application
+│   ├── src/
+│   │   ├── components/    # Header, Sidebar, Layout, ProtectedRoute
+│   │   ├── contexts/      # AuthContext
+│   │   ├── config/        # Firebase, Supabase, API configs
+│   │   └── pages/         # All page components
+│   └── package.json
+└── backend/           # FastAPI backend
+    ├── app/
+    │   ├── main.py        # FastAPI app entry point
+    │   ├── api/routes.py  # API endpoints
+    │   ├── models/        # ML model loaders
+    │   ├── preprocessing/ # Image preprocessing
+    │   ├── gradcam/       # GradCAM visualization
+    │   ├── pipelines/     # Complete ML pipelines
+    │   └── services/      # Supabase service
+    └── models/            # Trained model files
+        └── glaucoma_mobilenet_best.pth
+```
+
+---
+
+## ✅ COMPLETED FEATURES
+
+### 1. Authentication System (Firebase)
+
+**Status:** ✅ Fully Working
+
+**Implementation:**
+- **Location:** `frontend/src/contexts/AuthContext.jsx`
+- **Technology:** Firebase Authentication (Email/Password only)
+- **Features:**
+  - User signup with role selection (patient/doctor)
+  - User signin with email/password
+  - Signout functionality
+  - Role-based access control
+  - Persistent authentication state
+
+**Technical Details:**
+- Uses `onAuthStateChanged` listener for real-time auth state
+- User role stored in Firestore `user` collection on signup
+- Role fetched from Firestore on every auth state change
+- AuthContext provides: `currentUser`, `userRole`, `signup`, `signin`, `signout`, `loading`
+
+**Firebase Configuration:**
+- Project ID: `diagnovision-6bd9d`
+- Auth Domain: `diagnovision-6bd9d.firebaseapp.com`
+- Config: `frontend/src/config/firebase.js`
+
+**Auto-Created Collections on Signup:**
+- `user` collection: `{id, email, password: '', role}`
+- `patient` collection: `{user_id, name, age, gender, doctorId, contactNo}` (if patient)
+- `doctor` collection: `{user_id, name, qualification, licenseNo}` (if doctor)
+
+---
+
+### 2. Frontend Implementation
+
+**Status:** ✅ Core Features Working
+
+**Technology Stack:**
+- React.js 18.2.0 with Vite 5.0.8
+- React Router 6.20.0 for routing
+- Tailwind CSS 3.3.6 for styling
+- Firebase SDK 10.7.1 for authentication
+- Supabase JS 2.38.4 for image storage
+
+**✅ Completed Components:**
+
+1. **Layout Components** (`frontend/src/components/`)
+   - `Header.jsx` - Top navigation with sign-out
+   - `Sidebar.jsx` - Role-based navigation (patient/doctor)
+   - `Layout.jsx` - Main layout wrapper with responsive sidebar
+   - `ProtectedRoute.jsx` - Route protection based on auth and role
+
+2. **Authentication Pages**
+   - `SignIn.jsx` - User login page
+   - `SignUp.jsx` - User registration with role selection
+
+3. **Patient Pages** (`frontend/src/pages/patient/`)
+   - `PatientDashboard.jsx` - Patient dashboard (UI ready)
+   - `EyeScanAnalysis.jsx` - **✅ FULLY FUNCTIONAL** - Image upload, analysis, results display
+   - `PatientHistory.jsx` - History page (UI ready, needs data integration)
+   - `AvailableDoctors.jsx` - Available doctors list (UI ready)
+   - `MyDoctors.jsx` - Patient's assigned doctors (UI ready)
+   - `PatientMessages.jsx` - Messaging interface (UI ready, needs backend)
+
+4. **Doctor Pages** (`frontend/src/pages/doctor/`)
+   - `DoctorDashboard.jsx` - Doctor dashboard (UI ready)
+   - `DoctorPatients.jsx` - Doctor's patient list (UI ready)
+   - `DoctorMessages.jsx` - Messaging interface (UI ready, needs backend)
+
+**Key Features:**
+- Responsive design (mobile and desktop)
+- Role-based navigation
+- Protected routes
+- Error handling
+- Loading states
+
+---
+
+### 3. Backend Implementation
+
+**Status:** ✅ Glaucoma Model Working | ⏳ DR Model Placeholder
+
+**Technology Stack:**
+- FastAPI 0.104.1
+- PyTorch 2.9.1 (for ML models)
+- Torchvision 0.24.1
+- Captum 0.8.0 (for GradCAM)
+- Uvicorn 0.24.0 (ASGI server)
+- Supabase Python SDK 2.0.3
+
+**✅ Completed Backend Structure:**
+
+```
+backend/
+├── app/
+│   ├── main.py                 # FastAPI application entry point
+│   ├── config.py               # Configuration management
+│   ├── api/
+│   │   └── routes.py           # API endpoints
+│   ├── models/
+│   │   ├── glaucoma_model.py   # ✅ PyTorch MobileNetV2 model loader
+│   │   └── dr_model.py         # ⏳ Placeholder (TensorFlow - needs update)
+│   ├── preprocessing/
+│   │   ├── glaucoma_preprocess.py  # ✅ ImageNet normalization (224x224)
+│   │   └── dr_preprocess.py        # ⏳ Placeholder
+│   ├── gradcam/
+│   │   ├── glaucoma_gradcam.py    # ✅ Captum LayerGradCam implementation
+│   │   └── dr_gradcam.py           # ⏳ Placeholder
+│   ├── pipelines/
+│   │   ├── glaucoma_pipeline.py    # ✅ Complete pipeline (preprocess → predict → GradCAM)
+│   │   └── dr_pipeline.py          # ⏳ Placeholder pipeline
+│   └── services/
+│       └── supabase_service.py     # ✅ Image upload to Supabase Storage
+```
+
+**✅ Working API Endpoint:**
+
+**POST `/api/analyze`**
+- **Input:** 
+  - `image` (multipart/form-data file)
+  - `patient_id` (form data)
+- **Process:**
+  1. Receives image from frontend
+  2. Preprocesses image (ImageNet normalization, 224x224)
+  3. Runs Glaucoma model inference (PyTorch MobileNetV2)
+  4. Generates GradCAM heatmap and overlay (Captum)
+  5. Uploads 3 images to Supabase: original, heatmap, overlay
+  6. Stores image metadata in Supabase `images` table
+  7. Returns results to frontend
+- **Output:**
+  ```json
+  {
+    "success": true,
+    "patient_id": "...",
+    "image_id": "...",
+    "glaucoma": {
+      "result_msg": "...",
+      "confidence": 0.85,
+      "prediction": "...",
+      "raw_output": [0.15, 0.85]
+    },
+    "dr": {...},
+    "image_url": "...",
+    "heatmap_url": "...",
+    "overlay_url": "..."
+  }
+  ```
+
+**Technical Details:**
+- Model: PyTorch MobileNetV2 (pretrained on ImageNet, fine-tuned for Glaucoma)
+- Model File: `backend/models/glaucoma_mobilenet_best.pth`
+- Preprocessing: ImageNet normalization (mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+- GradCAM: Captum LayerGradCam targeting `model.features[-1]` (last conv block)
+- Device: Auto-detects CUDA if available, falls back to CPU
+
+---
+
+### 4. ML Model Integration (Glaucoma)
+
+**✅ Fully Implemented:**
+
+1. **Model Loading** (`backend/app/models/glaucoma_model.py`)
+   - Loads PyTorch MobileNetV2 from `.pth` file
+   - Replaces final classifier for 2 classes (glaucoma, normal)
+   - Auto-detects GPU/CPU
+   - Handles missing model file gracefully
+
+2. **Preprocessing** (`backend/app/preprocessing/glaucoma_preprocess.py`)
+   - Resize to 224x224 (matching training)
+   - ImageNet normalization
+   - Converts to PyTorch tensor
+   - Matches training notebook exactly
+
+3. **GradCAM Generation** (`backend/app/gradcam/glaucoma_gradcam.py`)
+   - Uses Captum LayerGradCam
+   - Generates colored heatmap (JET colormap)
+   - Creates overlay (60% original + 40% heatmap)
+   - Returns both heatmap_only and overlay
+   - Matches training notebook implementation
+
+4. **Complete Pipeline** (`backend/app/pipelines/glaucoma_pipeline.py`)
+   - Orchestrates: preprocessing → inference → GradCAM
+   - Returns formatted results with confidence scores
+   - Error handling and logging
+
+---
+
+### 5. Image Storage & Management
+
+**✅ Supabase Storage:**
+- **Bucket:** `images` (public)
+- **Structure:** `images/{patient_id}/{image_id}_{type}.jpg`
+  - `{image_id}_original.jpg` - Original uploaded image
+  - `{image_id}_heatmap.jpg` - GradCAM heatmap only
+  - `{image_id}_overlay.jpg` - Overlay image
+- **Service:** `backend/app/services/supabase_service.py`
+- **Status:** ✅ Working - All three images uploaded and URLs stored
+
+**✅ Supabase Database:**
+- **Table:** `images`
+- **Schema:** `imageId`, `Image_url`, `heatmap_url`, `overlay_url`, `grad_cam_url`
+- **Status:** ✅ Working - Metadata stored after image upload
+
+**✅ Firebase Results Storage:**
+- **Collections:** `glucoma_result`, `dr_result`
+- **Location:** `frontend/src/pages/patient/EyeScanAnalysis.jsx` (lines 68-85)
+- **Status:** ✅ Working - Results stored after analysis completes
+- **Data Flow:**
+  1. Backend returns results with `image_id`
+  2. Frontend stores in `glucoma_result` collection
+  3. Links to Supabase image via `imageId` field
+
+**Supabase Configuration:**
+- URL: `https://xoyxfcmpzmjjzwulejvr.supabase.co`
+- Service Key: Configured in `backend/app/config.py`
+- Storage: Public bucket "images" configured
+
+---
+
+### 6. Database Setup
+
+**✅ Firebase Firestore Collections (Working):**
+
+| Collection | Status | Fields | Created When |
+|------------|--------|--------|--------------|
+| `user` | ✅ Working | id, email, password, role | On signup |
+| `patient` | ✅ Working | user_id, name, age, gender, doctorId, contactNo | On patient signup |
+| `doctor` | ✅ Working | user_id, name, qualification, licenseNo | On doctor signup |
+| `glucoma_result` | ✅ Working | patientId, result_msg, imageId, doctor_feedback, date | On analysis |
+| `dr_result` | ✅ Working | patientId, result_msg, imageId, doctor_feedback, date | On analysis (placeholder) |
+
+**⏳ Firebase Collections (Structure Ready, Needs Implementation):**
+
+| Collection | Status | Fields | Needs |
+|------------|--------|--------|-------|
+| `messages` | ⏳ Structure Ready | msg_id, patientId, doctorId, msg, sent_by_patient | UI implementation |
+| `appointments` | ⏳ Structure Ready | id, patientID, doctorID, Date, status | UI implementation |
+| `notifications` | ⏳ Structure Ready | user_id, notification | UI implementation |
+
+**✅ Supabase Tables:**
+
+| Table | Status | Fields | Notes |
+|-------|--------|--------|-------|
+| `images` | ✅ Working | imageId, Image_url, heatmap_url, overlay_url, grad_cam_url | All three images stored |
+
+---
+
+## 🔄 CURRENT WORKFLOW
+
+### Image Analysis Flow (Working ✅)
+
+1. **User Action:** Patient logs in → Navigates to "Eye Scan Analysis"
+2. **Image Upload:** User selects retinal image file
+3. **Frontend:** Sends image + patient_id to backend API (`POST /api/analyze`)
+4. **Backend Processing:**
+   - Receives image bytes
+   - Preprocesses image (ImageNet normalization, 224x224)
+   - Loads Glaucoma model (PyTorch MobileNetV2)
+   - Runs inference → Gets prediction + confidence
+   - Generates GradCAM heatmap (Captum)
+   - Creates overlay (original + heatmap)
+5. **Supabase Upload:**
+   - Uploads original image → Gets URL
+   - Uploads heatmap image → Gets URL
+   - Uploads overlay image → Gets URL
+   - Stores all URLs in `images` table
+6. **Backend Response:** Returns results + all three image URLs
+7. **Frontend:**
+   - Displays results (confidence, prediction message)
+   - Shows all three images (original, heatmap, overlay)
+   - Stores results in Firebase `glucoma_result` collection
+   - Links result to image via `imageId`
+
+**Result:** Complete end-to-end flow working! ✅
+
+---
+
+## ⏳ REMAINING TASKS
+
+### Priority 1: DR Model Integration
+
+**Status:** Placeholder code exists, needs actual model and notebook
+
+**Tasks:**
+1. **Get DR Training Materials:**
+   - DR training notebook (`.ipynb`)
+   - Trained DR model file (`.pth` or `.h5`)
+
+2. **Update DR Model Loader** (`backend/app/models/dr_model.py`)
+   - Currently: TensorFlow placeholder
+   - Needs: PyTorch model loader (if model is PyTorch) OR TensorFlow loader (if model is TensorFlow)
+   - Match the model architecture from notebook
+
+3. **Update DR Preprocessing** (`backend/app/preprocessing/dr_preprocess.py`)
+   - Currently: Placeholder
+   - Needs: Match DR training notebook preprocessing exactly
+   - May differ from Glaucoma preprocessing
+
+4. **Update DR GradCAM** (`backend/app/gradcam/dr_gradcam.py`)
+   - Currently: TensorFlow placeholder
+   - Needs: Match DR training notebook GradCAM implementation
+   - Use Captum if PyTorch, or TensorFlow GradCAM if TensorFlow
+
+5. **Update DR Pipeline** (`backend/app/pipelines/dr_pipeline.py`)
+   - Currently: Placeholder
+   - Needs: Complete pipeline matching Glaucoma pipeline structure
+   - Return same format: `gradcam_heatmap` and `gradcam_overlay`
+
+6. **Test DR Model:**
+   - Verify preprocessing matches training
+   - Verify model loads correctly
+   - Verify predictions are accurate
+   - Verify GradCAM visualization works
+
+---
+
+### Priority 2: Firebase Collections Functionality
+
+**Collections Exist But Need Implementation:**
+
+1. **Messages System** (`messages` collection)
+   - **Current:** Collection structure defined, UI pages exist
+   - **Needs:**
+     - Frontend: Real-time message sending/receiving
+     - Frontend: Message list display
+     - Frontend: Chat interface for patient-doctor communication
+     - Backend: (Optional) Message validation/processing
+   - **Files to Update:**
+     - `frontend/src/pages/patient/PatientMessages.jsx`
+     - `frontend/src/pages/doctor/DoctorMessages.jsx`
+
+2. **Appointments System** (`appointments` collection)
+   - **Current:** Collection structure defined, UI pages exist
+   - **Needs:**
+     - Frontend: Appointment booking interface
+     - Frontend: Appointment calendar view
+     - Frontend: Appointment status management
+     - Backend: (Optional) Appointment validation/scheduling logic
+   - **Files to Update:**
+     - Create appointment booking page
+     - Update patient/doctor dashboards
+
+3. **Notifications System** (`notifications` collection)
+   - **Current:** Collection structure defined
+   - **Needs:**
+     - Frontend: Notification display component
+     - Frontend: Real-time notification listener
+     - Frontend: Notification badge/count
+     - Backend: (Optional) Notification generation logic
+   - **Files to Create/Update:**
+     - Create notification component
+     - Add to Header/Layout
+
+---
+
+### Priority 3: History & Results Display
+
+**Current:** Results are stored but not displayed in History page
+
+**Tasks:**
+1. **Patient History Page** (`frontend/src/pages/patient/PatientHistory.jsx`)
+   - Fetch all `glucoma_result` and `dr_result` for current patient
+   - Display results in chronological order
+   - Show images from Supabase using `imageId`
+   - Allow filtering by date, disease type
+   - Link to detailed result view
+
+2. **Doctor Results View** (`frontend/src/pages/doctor/DoctorPatients.jsx`)
+   - Fetch all patients assigned to doctor
+   - Show patient results
+   - Allow doctor to add feedback
+   - Update `doctor_feedback` field in results
+
+---
+
+### Priority 4: Additional Features
+
+1. **Patient Profile Management**
+   - Update patient profile (age, gender, contactNo)
+   - Link patient to doctor (update `doctorId` field)
+
+2. **Doctor Profile Management**
+   - Update doctor profile (qualification, licenseNo)
+   - Doctor availability settings
+
+3. **Available Doctors Page**
+   - List all doctors from `doctor` collection
+   - Allow patient to request doctor assignment
+   - Update patient's `doctorId` field
+
+4. **My Doctors Page**
+   - Show patient's assigned doctor
+   - Display doctor information
+   - Quick message/contact options
+
+---
+
+## 🎯 Current Capabilities
+
+**✅ What Works Right Now:**
+
+1. User can sign up as patient or doctor
+2. User can sign in with email/password
+3. Patient can upload retinal image through Eye Scan Analysis page
+4. Backend processes image with Glaucoma model
+5. GradCAM visualization generated (heatmap + overlay)
+6. Three images stored in Supabase:
+   - Original image
+   - Heatmap only (colored)
+   - Overlay (original + heatmap)
+7. Results displayed in frontend with:
+   - Glaucoma prediction
+   - Confidence score
+   - All three visualizations
+8. Results stored in Firebase `glucoma_result` collection
+9. Image metadata stored in Supabase `images` table
+
+**⏳ What's Not Working Yet:**
+
+1. **DR Model** - Placeholder only, needs actual model
+2. **Messages** - UI exists but no functionality
+3. **Appointments** - UI exists but no functionality
+4. **Notifications** - Not implemented
+5. **History Page** - UI exists but doesn't fetch/display results
+6. **Doctor Feedback** - Results stored but no UI to add feedback
+
+---
+
+## 🔧 Technical Architecture
+
+### Frontend Architecture
+
+```
+frontend/
+├── src/
+│   ├── components/          # Reusable UI components
+│   │   ├── Header.jsx      # Navigation header
+│   │   ├── Sidebar.jsx     # Role-based sidebar
+│   │   ├── Layout.jsx      # Main layout wrapper
+│   │   └── ProtectedRoute.jsx  # Route protection
+│   ├── contexts/
+│   │   └── AuthContext.jsx # Firebase auth state management
+│   ├── config/
+│   │   ├── firebase.js     # Firebase configuration
+│   │   ├── supabase.js     # Supabase client
+│   │   └── api.js          # Backend API endpoints
+│   └── pages/
+│       ├── SignIn.jsx      # Login page
+│       ├── SignUp.jsx      # Registration page
+│       ├── Home.jsx        # Landing page
+│       └── patient/        # Patient-specific pages
+│       └── doctor/         # Doctor-specific pages
+```
+
+### Backend Architecture
+
+```
+backend/
+├── app/
+│   ├── main.py             # FastAPI app initialization
+│   ├── config.py           # Environment configuration
+│   ├── api/
+│   │   └── routes.py      # API endpoint definitions
+│   ├── models/             # ML model loaders
+│   ├── preprocessing/      # Image preprocessing
+│   ├── gradcam/            # GradCAM visualization
+│   ├── pipelines/          # Complete ML pipelines
+│   └── services/           # External service integrations
+└── models/                 # Trained model files
+    └── glaucoma_mobilenet_best.pth
+```
+
+---
+
+## 📝 Next Steps Summary
+
+### Immediate (Priority 1)
+1. Get DR training notebook and model
+2. Integrate DR model (match Glaucoma implementation)
+3. Test DR pipeline end-to-end
+
+### Short-term (Priority 2)
+1. Implement messaging functionality
+2. Implement appointment booking
+3. Implement notifications system
+4. Update History page to display results
+
+### Medium-term (Priority 3)
+1. Doctor feedback interface
+2. Patient profile management
+3. Doctor profile management
+4. Available doctors assignment
+
+---
+
+## 🔗 Key Files Reference
+
+### Authentication
+- `frontend/src/contexts/AuthContext.jsx` - Auth state management
+- `frontend/src/config/firebase.js` - Firebase config
+
+### Image Analysis
+- `frontend/src/pages/patient/EyeScanAnalysis.jsx` - Image upload & results display
+- `backend/app/api/routes.py` - API endpoint
+- `backend/app/pipelines/glaucoma_pipeline.py` - Glaucoma processing
+- `backend/app/models/glaucoma_model.py` - Model loader
+- `backend/app/preprocessing/glaucoma_preprocess.py` - Image preprocessing
+- `backend/app/gradcam/glaucoma_gradcam.py` - GradCAM generation
+- `backend/app/services/supabase_service.py` - Image storage
+
+### Database
+- `frontend/SCHEMA.md` - Complete schema documentation
+- `SUPABASE_SCHEMA_UPDATE.md` - Supabase table update instructions
+
+---
+
+## 📋 Configuration Files
+
+### Environment Variables Needed
+
+**Backend** (`.env` file in `backend/`):
+```
+SUPABASE_URL=https://xoyxfcmpzmjjzwulejvr.supabase.co
+SUPABASE_SERVICE_KEY=<service_key>
+GLAUCOMA_MODEL_PATH=models/glaucoma_mobilenet_best.pth
+```
+
+**Frontend** (`frontend/src/config/`):
+- Firebase config already set up
+- Supabase client already configured
+- API endpoint: `http://localhost:8000` (development)
+
+### Dependency Installation
+
+**Frontend:**
+```bash
+cd frontend
+npm install
+# Or run install.bat (Windows) / install.sh (Linux/Mac)
+```
+
+**Backend:**
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+---
+
+**End of Status Report**

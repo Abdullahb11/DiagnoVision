@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Models
+# Note: glaucoma_mobilenet_best.pth is tracked, so we allow it
+models/*.h5
+models/*.pkl
+models/*.pt
+# models/*.pth  # Commented out to allow glaucoma model
+*.h5
+*.pkl
+*.pt
+# *.pth  # Commented out to allow glaucoma model
+!models/glaucoma_mobilenet_best.pth  # Explicitly allow this file
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+

@@ -1,0 +1,60 @@
+# DiagnoVision Project Rules
+
+## Database Schema
+
+### Firebase Tables
+
+**user** ( id, email, password, role )
+
+**patient** ( user_id, name, age, gender, doctorId, contactNo )
+
+**doctor** ( user_id, name, qualification, licenseNo )
+
+**messages** ( msg_id, patientId, doctorId, msg, sent_by_patient )
+
+**notifications** ( user_id, notification )
+
+**glucoma_result** ( patientId, result_msg, imageId, doctor_feedback, date )
+
+**dr_result** ( patientId, result_msg, imageId, doctor_feedback, date )
+
+**appointments** ( id, patientID, doctorID, Date, status )
+
+### Supabase Tables
+
+**images** ( imageId, Image_url, heatmap_url, overlay_url, grad_cam_url )
+
+### Notes
+- Supabase stores images and will store references in image table
+- Both glucoma_result and dr_result reference images via imageId
+- Firebase handles user authentication and data storage
+- Supabase handles image storage and retrieval
+
+## Tech Stack
+
+### Frontend
+- **React.js** - UI framework (using Vite as build tool)
+- **React Router** - Client-side routing
+- **Tailwind CSS** - Styling framework
+- **Firebase** - Authentication and user data storage
+- **Supabase** - Image storage and retrieval
+
+### Backend/ML
+- **FastAPI** - Backend API for ML model inference
+- **ML Models** - Glaucoma and Diabetic Retinopathy detection
+- **GradCAM** - Model explainability/visualization
+
+### Key Features
+- Image upload and storage in Supabase
+- ML model inference via FastAPI
+- GradCAM heatmap generation for explainability
+- Real-time results stored in Firebase
+- Role-based access (Patient/Doctor)
+
+## Project Setup
+- Installation scripts provided: `install.bat` (Windows) and `install.sh` (Linux/Mac)
+- Run `npm install` or use the install scripts to set up dependencies
+- Run `npm run dev` to start the development server
+- Make sure to add a file so whenever someone clones from GitHub they can easily just run that file and download all the dependencies
+- Make sure to do everything such that when we push to GitHub and someone clones it, then they should be easily able to download the dependencies and run the project
+
