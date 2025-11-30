@@ -1,6 +1,7 @@
 @echo off
 echo ========================================
 echo DiagnoVision - Complete Setup Script
+echo pre req ( python <= 3.11 )
 echo ========================================
 echo.
 echo This script will install all dependencies for both backend and frontend.
