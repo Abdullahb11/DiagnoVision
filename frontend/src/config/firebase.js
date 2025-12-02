@@ -3,12 +3,29 @@ import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAMUgHQRjj0OjjqsM5z6QKlcQBntMzcFso",
-  authDomain: "diagnovision-6bd9d.firebaseapp.com",
-  projectId: "diagnovision-6bd9d",
-  storageBucket: "diagnovision-6bd9d.firebasestorage.app",
-  messagingSenderId: "404961014974",
-  appId: "1:404961014974:web:84d00bc3c9984801605aef"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
+}
+
+// Validate that all required environment variables are set
+const requiredEnvVars = [
+  'VITE_FIREBASE_API_KEY',
+  'VITE_FIREBASE_AUTH_DOMAIN',
+  'VITE_FIREBASE_PROJECT_ID',
+  'VITE_FIREBASE_STORAGE_BUCKET',
+  'VITE_FIREBASE_MESSAGING_SENDER_ID',
+  'VITE_FIREBASE_APP_ID'
+]
+
+const missingVars = requiredEnvVars.filter(varName => !import.meta.env[varName])
+if (missingVars.length > 0) {
+  console.error('Missing required Firebase environment variables:', missingVars)
+  console.error('Please create a .env file in the frontend directory with these variables.')
+  console.error('See .env.example for a template.')
 }
 
 const app = initializeApp(firebaseConfig)

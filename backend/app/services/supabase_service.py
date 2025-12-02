@@ -12,6 +12,18 @@ class SupabaseService:
     """Service for Supabase operations"""
     
     def __init__(self):
+        # Validate that required environment variables are set
+        if not settings.SUPABASE_URL:
+            raise ValueError(
+                "SUPABASE_URL is not set. Please create a .env file in the backend directory "
+                "and add SUPABASE_URL. See .env.example for a template."
+            )
+        if not settings.SUPABASE_SERVICE_KEY:
+            raise ValueError(
+                "SUPABASE_SERVICE_KEY is not set. Please create a .env file in the backend directory "
+                "and add SUPABASE_SERVICE_KEY. See .env.example for a template."
+            )
+        
         self.supabase: Client = create_client(
             settings.SUPABASE_URL,
             settings.SUPABASE_SERVICE_KEY

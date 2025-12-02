@@ -5,8 +5,11 @@ load_dotenv()
 
 class Settings:
     # Supabase Configuration
-    SUPABASE_URL = os.getenv("SUPABASE_URL", "https://xoyxfcmpzmjjzwulejvr.supabase.co")
-    SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhveXhmY21wem1qanp3dWxlanZyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NDQzNTExMywiZXhwIjoyMDgwMDExMTEzfQ.3SpFd70YVK2tcKAByf4djQv9GgRi_RYP51IK_cWQWhs")
+    SUPABASE_URL = os.getenv("SUPABASE_URL")
+    SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+    
+    # Firebase Configuration
+    FIREBASE_SERVICE_ACCOUNT_KEY_PATH = os.getenv("FIREBASE_SERVICE_ACCOUNT_KEY_PATH")
     
     # API Configuration
     API_PORT = int(os.getenv("API_PORT", 8000))

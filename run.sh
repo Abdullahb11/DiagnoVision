@@ -94,3 +94,4 @@ echo "Press Ctrl+C to stop both servers..."
 trap "kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; exit" INT TERM
 wait
 
+

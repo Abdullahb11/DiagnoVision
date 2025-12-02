@@ -1,6 +1,7 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
 import logging
+import os
 from datetime import datetime
 from app.config import settings
 
@@ -11,14 +12,19 @@ class FirebaseService:
     
     def __init__(self):
         # Initialize Firebase Admin SDK
-        # Note: You'll need to download service account key JSON file
-        # For now, using placeholder initialization
         try:
             if not firebase_admin._apps:
-                # TODO: Initialize with actual service account key
-                # cred = credentials.Certificate("path/to/serviceAccountKey.json")
-                # firebase_admin.initialize_app(cred)
-                logger.warning("Firebase Admin not initialized - using placeholder")
+                firebase_key_path = settings.FIREBASE_SERVICE_ACCOUNT_KEY_PATH
+                if firebase_key_path and os.path.exists(firebase_key_path):
+                    cred = credentials.Certificate(firebase_key_path)
+                    firebase_admin.initialize_app(cred)
+                    logger.info("Firebase Admin initialized successfully")
+                else:
+                    logger.warning(
+                        f"Firebase service account key not found at {firebase_key_path}. "
+                        "Set FIREBASE_SERVICE_ACCOUNT_KEY_PATH in .env file. "
+                        "Firebase operations will be skipped."
+                    )
             self.db = firestore.client()
         except Exception as e:
             logger.warning(f"Firebase initialization warning: {str(e)}")
