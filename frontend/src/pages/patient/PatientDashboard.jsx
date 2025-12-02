@@ -1,20 +1,91 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useState, useEffect } from 'react'
 import Layout from '../../components/Layout'
 import { useAuth } from '../../contexts/AuthContext'
+import { collection, getDocs, query, where } from 'firebase/firestore'
+import { db } from '../../config/firebase'
 import { 
   ScanEye, History, Users, MessageSquare, 
-  TrendingUp, Shield, AlertCircle, ArrowRight,
+  TrendingUp, Shield, ArrowRight,
   Activity, Eye, CheckCircle, Clock
 } from 'lucide-react'
 
 const PatientDashboard = () => {
   const { currentUser } = useAuth()
+  const [recentScans, setRecentScans] = useState([])
+  const [totalScans, setTotalScans] = useState(0)
+  const [loading, setLoading] = useState(true)
+  
+  useEffect(() => {
+    if (currentUser) {
+      fetchRecentScans()
+    }
+  }, [currentUser])
+
+  const fetchRecentScans = async () => {
+    if (!currentUser) return
+    
+    try {
+      setLoading(true)
+      const glaucomaQuery = query(
+        collection(db, 'glucoma_result'),
+        where('patientId', '==', currentUser.uid)
+      )
+      const snapshot = await getDocs(glaucomaQuery)
+      
+      const scans = snapshot.docs.map((doc) => {
+        const data = doc.data()
+        const date = data.date ? new Date(data.date) : new Date()
+        const now = new Date()
+        const diffTime = Math.abs(now - date)
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        
+        let dateText = ''
+        if (diffDays === 0) dateText = 'Today'
+        else if (diffDays === 1) dateText = '1 day ago'
+        else if (diffDays < 7) dateText = `${diffDays} days ago`
+        else if (diffDays < 14) dateText = '1 week ago'
+        else if (diffDays < 30) dateText = `${Math.floor(diffDays / 7)} weeks ago`
+        else dateText = `${Math.floor(diffDays / 30)} months ago`
+        
+        const confidence = data.confidence || 0
+        let status = 'Normal'
+        let statusColor = 'badge-success'
+        if (confidence >= 0.7) {
+          status = 'High Risk'
+          statusColor = 'badge-danger'
+        } else if (confidence >= 0.5) {
+          status = 'Needs Review'
+          statusColor = 'badge-warning'
+        }
+        
+        return {
+          id: data.imageId,
+          date: dateText,
+          status: status,
+          statusColor: statusColor,
+          result: data.result_msg || 'N/A',
+          rawDate: date
+        }
+      }).sort((a, b) => {
+        // Sort by date descending (newest first)
+        return b.rawDate - a.rawDate
+      }).slice(0, 3) // Get only 3 most recent
+      
+      setRecentScans(scans)
+      setTotalScans(snapshot.size)
+    } catch (error) {
+      console.error('Error fetching recent scans:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
   
   const stats = [
     { 
       label: 'Total Scans', 
-      value: '12', 
+      value: totalScans.toString(), 
       icon: ScanEye,
       color: 'from-primary-500 to-primary-600',
       bgColor: 'bg-primary-500/10',
@@ -38,26 +109,6 @@ const PatientDashboard = () => {
     },
   ]
 
-  const recentScans = [
-    { 
-      eye: 'Left Eye', 
-      date: '2 days ago', 
-      status: 'Normal',
-      statusColor: 'badge-success'
-    },
-    { 
-      eye: 'Right Eye', 
-      date: '1 week ago', 
-      status: 'Minor Risk',
-      statusColor: 'badge-warning'
-    },
-    { 
-      eye: 'Left Eye', 
-      date: '2 weeks ago', 
-      status: 'Normal',
-      statusColor: 'badge-success'
-    },
-  ]
 
   const quickActions = [
     { 
@@ -143,42 +194,56 @@ const PatientDashboard = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="glass-card p-6"
+            className="glass-card p-6 relative z-10"
           >
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 relative z-20">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-primary-500/10">
                   <Activity className="w-5 h-5 text-primary-400" />
                 </div>
                 <h3 className="text-lg font-semibold text-white">Recent Scans</h3>
               </div>
-              <Link to="/patient/history" className="text-sm text-primary-400 hover:text-primary-300 transition-colors flex items-center gap-1">
+              <Link 
+                to="/patient/history" 
+                className="text-sm text-primary-400 hover:text-primary-300 transition-colors flex items-center gap-1 cursor-pointer relative z-30 pointer-events-auto"
+              >
                 View all
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
 
             <div className="space-y-3">
-              {recentScans.map((scan, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-4 rounded-xl bg-dark-800/50 border border-white/5 hover:border-white/10 transition-all duration-300"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="p-2 rounded-lg bg-primary-500/10">
-                      <Eye className="w-5 h-5 text-primary-400" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-white">{scan.eye}</p>
-                      <p className="text-sm text-dark-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {scan.date}
-                      </p>
-                    </div>
-                  </div>
-                  <span className={scan.statusColor}>{scan.status}</span>
+              {loading ? (
+                <div className="p-4 rounded-xl bg-dark-800/50 border border-white/5 text-center">
+                  <p className="text-sm text-dark-400">Loading scans...</p>
                 </div>
-              ))}
+              ) : recentScans.length > 0 ? (
+                recentScans.map((scan) => (
+                  <Link
+                    key={scan.id}
+                    to="/patient/history"
+                    className="flex items-center justify-between p-4 rounded-xl bg-dark-800/50 border border-white/5 hover:border-white/10 hover:border-primary-500/30 transition-all duration-300 cursor-pointer"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="p-2 rounded-lg bg-primary-500/10">
+                        <Eye className="w-5 h-5 text-primary-400" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-white">{scan.result}</p>
+                        <p className="text-sm text-dark-400 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {scan.date}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={scan.statusColor}>{scan.status}</span>
+                  </Link>
+                ))
+              ) : (
+                <div className="p-4 rounded-xl bg-dark-800/50 border border-white/5 text-center">
+                  <p className="text-sm text-dark-400">No scans yet. Upload your first scan to get started!</p>
+                </div>
+              )}
             </div>
           </motion.div>
 
@@ -186,7 +251,7 @@ const PatientDashboard = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
-            className="glass-card p-6"
+            className="glass-card p-6 relative z-10"
           >
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-xl bg-accent-500/10">
@@ -202,7 +267,7 @@ const PatientDashboard = () => {
                   <Link
                     key={action.path}
                     to={action.path}
-                    className="group p-4 rounded-xl bg-dark-800/50 border border-white/5 hover:border-primary-500/30 hover:bg-dark-800 transition-all duration-300"
+                    className="group p-4 rounded-xl bg-dark-800/50 border border-white/5 hover:border-primary-500/30 hover:bg-dark-800 transition-all duration-300 cursor-pointer relative z-10"
                   >
                     <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300`}>
                       <Icon className="w-5 h-5 text-white" />
@@ -216,30 +281,6 @@ const PatientDashboard = () => {
           </motion.div>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-          className="glass-card p-6 bg-gradient-to-br from-primary-500/5 to-medical-500/5"
-        >
-          <div className="flex flex-col md:flex-row md:items-center gap-6">
-            <div className="p-4 rounded-2xl bg-primary-500/10 border border-primary-500/20">
-              <AlertCircle className="w-8 h-8 text-primary-400" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-white mb-2">
-                Stay Proactive About Your Eye Health
-              </h3>
-              <p className="text-dark-400">
-                Regular eye screenings can help detect conditions early. Consider scheduling your next scan soon to track any changes.
-              </p>
-            </div>
-            <Link to="/patient/scan" className="btn-primary flex items-center gap-2 whitespace-nowrap">
-              Schedule Scan
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-          </div>
-        </motion.div>
       </div>
     </Layout>
   )
