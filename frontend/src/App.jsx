@@ -3,6 +3,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import SignIn from './pages/SignIn'
 import SignUp from './pages/SignUp'
+import Landing from './pages/Landing'
 import Home from './pages/Home'
 import PatientDashboard from './pages/patient/PatientDashboard'
 import PatientHistory from './pages/patient/PatientHistory'
@@ -10,15 +11,18 @@ import EyeScanAnalysis from './pages/patient/EyeScanAnalysis'
 import AvailableDoctors from './pages/patient/AvailableDoctors'
 import MyDoctors from './pages/patient/MyDoctors'
 import PatientMessages from './pages/patient/PatientMessages'
+import PatientNotifications from './pages/patient/PatientNotifications'
 import DoctorDashboard from './pages/doctor/DoctorDashboard'
 import DoctorPatients from './pages/doctor/DoctorPatients'
 import DoctorMessages from './pages/doctor/DoctorMessages'
+import DoctorNotifications from './pages/doctor/DoctorNotifications'
 
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
+          <Route path="/" element={<Landing />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
           <Route
@@ -78,6 +82,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/patient/notifications"
+            element={
+              <ProtectedRoute requiredRole="patient">
+                <PatientNotifications />
+              </ProtectedRoute>
+            }
+          />
           {/* Doctor Routes */}
           <Route
             path="/doctor/dashboard"
@@ -103,8 +115,15 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/" element={<Navigate to="/home" replace />} />
-          <Route path="*" element={<Navigate to="/home" replace />} />
+          <Route
+            path="/doctor/notifications"
+            element={
+              <ProtectedRoute requiredRole="doctor">
+                <DoctorNotifications />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </AuthProvider>

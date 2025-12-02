@@ -13,10 +13,31 @@ const Header = ({ onMenuClick }) => {
   const location = useLocation()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
 
-  const handleSignOut = async () => {
-    const result = await signout()
-    if (result.success) {
-      navigate('/signin')
+  const handleSignOut = async (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    console.log('Sign out button clicked')
+    
+    // Close the menu first
+    setUserMenuOpen(false)
+    
+    try {
+      console.log('Calling signout function...')
+      const result = await signout()
+      console.log('Signout result:', result)
+      
+      if (result.success) {
+        console.log('Signout successful, navigating to signin...')
+        // Use window.location for a hard navigation to ensure clean state
+        window.location.href = '/signin'
+      } else {
+        console.error('Sign out error:', result.error)
+        alert('Failed to sign out: ' + result.error)
+      }
+    } catch (error) {
+      console.error('Sign out error:', error)
+      alert('Failed to sign out: ' + error.message)
     }
   }
 
@@ -95,6 +116,21 @@ const Header = ({ onMenuClick }) => {
           </nav>
 
           <div className="flex items-center gap-3">
+            {/* Sign out button */}
+            {currentUser && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleSignOut(e)
+                }}
+                className="p-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition-all"
+                title="Sign Out"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            )}
+            
             <div className="relative">
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
@@ -110,7 +146,7 @@ const Header = ({ onMenuClick }) => {
                 {userMenuOpen && (
                   <>
                     <div 
-                      className="fixed inset-0 z-10" 
+                      className="fixed inset-0 z-40" 
                       onClick={() => setUserMenuOpen(false)}
                     />
                     <motion.div
@@ -118,9 +154,9 @@ const Header = ({ onMenuClick }) => {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
-                      className="absolute right-0 mt-2 w-64 glass-card p-2 z-20"
+                      className="absolute right-0 mt-2 w-64 glass-card p-2 z-50"
                     >
-                      <div className="px-3 py-2 border-b border-white/10 mb-2">
+                      <div className="px-3 py-2">
                         <p className="text-sm font-medium text-white truncate">
                           {currentUser?.displayName || 'User'}
                         </p>
@@ -133,14 +169,6 @@ const Header = ({ onMenuClick }) => {
                           </span>
                         )}
                       </div>
-
-                      <button
-                        onClick={handleSignOut}
-                        className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        <span className="font-medium">Sign out</span>
-                      </button>
                     </motion.div>
                   </>
                 )}

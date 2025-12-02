@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import Layout from '../../components/Layout'
 import { 
   UserCheck, MessageSquare, Calendar, Star, 
-  Phone, Video, ChevronRight, Clock
+  ChevronRight
 } from 'lucide-react'
 
 const MyDoctors = () => {
@@ -11,8 +11,6 @@ const MyDoctors = () => {
       id: 1,
       name: 'Dr. Sarah Johnson',
       specialty: 'Ophthalmologist',
-      lastVisit: 'Nov 28, 2025',
-      nextAppointment: 'Dec 15, 2025',
       rating: 4.9,
       status: 'active'
     },
@@ -20,8 +18,6 @@ const MyDoctors = () => {
       id: 2,
       name: 'Dr. Michael Chen',
       specialty: 'Retina Specialist',
-      lastVisit: 'Oct 15, 2025',
-      nextAppointment: null,
       rating: 4.8,
       status: 'active'
     },
@@ -29,8 +25,6 @@ const MyDoctors = () => {
       id: 3,
       name: 'Dr. Emily Williams',
       specialty: 'Glaucoma Specialist',
-      lastVisit: 'Sep 20, 2025',
-      nextAppointment: 'Jan 10, 2026',
       rating: 4.7,
       status: 'active'
     },
@@ -84,27 +78,10 @@ const MyDoctors = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="p-3 rounded-xl bg-dark-800/50">
-                  <p className="text-xs text-dark-500 mb-1">Last Visit</p>
-                  <p className="text-sm font-medium text-white">{doctor.lastVisit}</p>
-                </div>
-                <div className="p-3 rounded-xl bg-dark-800/50">
-                  <p className="text-xs text-dark-500 mb-1">Next Appointment</p>
-                  <p className={`text-sm font-medium ${doctor.nextAppointment ? 'text-accent-400' : 'text-dark-400'}`}>
-                    {doctor.nextAppointment || 'Not scheduled'}
-                  </p>
-                </div>
-              </div>
-
               <div className="flex gap-3">
                 <button className="flex-1 btn-secondary flex items-center justify-center gap-2 py-2">
                   <MessageSquare className="w-4 h-4" />
                   Message
-                </button>
-                <button className="flex-1 btn-secondary flex items-center justify-center gap-2 py-2">
-                  <Video className="w-4 h-4" />
-                  Video Call
                 </button>
                 <button className="p-2 btn-primary">
                   <Calendar className="w-5 h-5" />
