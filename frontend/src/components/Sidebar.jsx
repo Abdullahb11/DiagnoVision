@@ -133,25 +133,14 @@ const Sidebar = ({ isOpen, onClose }) => {
 
     return (
       <nav className="px-3 space-y-1">
-        {navItems.map((item, index) => {
+        {navItems.map((item) => {
           const Icon = item.icon
           const active = isActive(item.path)
           
           return (
-            <motion.div
-              key={item.path}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
+            <div key={item.path}>
               <Link
                 to={item.path}
-                onClick={() => {
-                  // Only close sidebar on mobile when clicking a link
-                  if (window.innerWidth < 1024) {
-                    onClose()
-                  }
-                }}
                 className={`group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
                   active
                     ? 'bg-gradient-to-r from-primary-500/20 to-primary-500/5 text-white border-l-2 border-primary-400'
@@ -177,7 +166,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                   <div className="w-1.5 h-1.5 rounded-full bg-primary-400 animate-pulse" />
                 )}
               </Link>
-            </motion.div>
+            </div>
           )
         })}
       </nav>
@@ -205,7 +194,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         initial={isDesktop ? "open" : "closed"}
         animate={isOpen || isDesktop ? "open" : "closed"}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        className="fixed top-0 left-0 z-50 w-72 h-screen lg:sticky lg:top-0 lg:h-auto lg:min-h-screen"
+        className="fixed top-0 left-0 z-50 w-72 h-screen"
       >
         <div className="h-full bg-dark-900/95 backdrop-blur-xl border-r border-white/5 flex flex-col">
           <div className="flex items-center justify-between p-4 pt-20 lg:pt-6 border-b border-white/5">

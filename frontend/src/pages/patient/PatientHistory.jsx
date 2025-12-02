@@ -68,15 +68,10 @@ const PatientHistory = () => {
   }
 
   const handleToggleScan = (scan) => {
-    console.log('[History] Clicked scan:', scan.id, 'Current expanded:', expandedScan)
     const nextExpanded = expandedScan === scan.id ? null : scan.id
-    console.log('[History] Setting expanded to:', nextExpanded)
     setExpandedScan(nextExpanded)
     if (nextExpanded && !imageData[scan.imageId]) {
-      console.log('[History] Fetching images for:', scan.imageId)
       fetchImageUrls(scan.imageId)
-    } else if (nextExpanded) {
-      console.log('[History] Images already cached for:', scan.imageId, imageData[scan.imageId])
     }
   }
 
@@ -219,17 +214,11 @@ const PatientHistory = () => {
               className="space-y-4"
             >
               {scanHistory.map((scan, index) => {
-                console.log('[History] Rendering scan card:', scan.id, 'index:', index)
                 const status = getStatus(scan.glaucomaConfidence)
                 const images = imageData[scan.imageId] || {}
                 const isExpanded = expandedScan === scan.id
                 const isImageLoading = imageLoading[scan.imageId]
-                const scanNumber = `Scan #${index + 1}`
-                
-                // Debug log
-                if (isExpanded) {
-                  console.log('[History] Rendering expanded scan:', scan.id, 'Images:', images)
-                }
+                const scanNumber = `Scan #${scanHistory.length - index}`
 
                 return (
                   <motion.div
