@@ -112,10 +112,32 @@ export const AuthProvider = ({ children }) => {
 
   const signout = async () => {
     try {
-      await firebaseSignOut(auth)
+      console.log('Signing out...')
+      console.log('Current auth state:', auth.currentUser)
+      
+      if (!auth) {
+        throw new Error('Firebase auth is not initialized')
+      }
+      
+      // Clear user state first
+      setCurrentUser(null)
       setUserRole(null)
+      
+      // Then sign out from Firebase
+      await firebaseSignOut(auth)
+      console.log('Firebase signout successful')
+      
+      // Double check - clear state again after signout
+      setCurrentUser(null)
+      setUserRole(null)
+      console.log('User state cleared')
+      
       return { success: true }
     } catch (error) {
+      console.error('Signout error:', error)
+      // Even if there's an error, clear local state
+      setCurrentUser(null)
+      setUserRole(null)
       return { success: false, error: error.message }
     }
   }

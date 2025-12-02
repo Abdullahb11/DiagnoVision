@@ -10,9 +10,11 @@ const Layout = ({ children }) => {
 
   useEffect(() => {
     const handleResize = () => {
+      // On desktop (lg and above), always keep sidebar open
       if (window.innerWidth >= 1024) {
         setSidebarOpen(true)
       } else {
+        // On mobile, keep it closed by default
         setSidebarOpen(false)
       }
     }
@@ -23,6 +25,7 @@ const Layout = ({ children }) => {
   }, [])
 
   useEffect(() => {
+    // Always show sidebar on desktop when user is logged in
     if (currentUser && window.innerWidth >= 1024) {
       setSidebarOpen(true)
     }
@@ -34,8 +37,17 @@ const Layout = ({ children }) => {
       <div className="fixed inset-0 bg-gradient-to-br from-primary-500/5 via-transparent to-medical-500/5 pointer-events-none" />
       
       <div className="relative flex min-h-screen">
-        {currentUser && (
+        {currentUser ? (
           <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        ) : (
+          <div className="fixed top-0 left-0 z-50 w-72 h-screen lg:sticky lg:top-0 lg:h-auto lg:min-h-screen bg-dark-900/95 backdrop-blur-xl border-r border-white/5 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-primary-500/20 flex items-center justify-center">
+                <div className="loading-spinner w-8 h-8" />
+              </div>
+              <p className="text-sm text-dark-400">Loading sidebar...</p>
+            </div>
+          </div>
         )}
 
         <div className="flex-1 flex flex-col min-w-0">

@@ -150,17 +150,6 @@ const Home = () => {
                 <ArrowRight className="w-5 h-5" />
               </Link>
             )}
-            {!userRole && (
-              <>
-                <Link to="/signup" className="btn-primary flex items-center gap-2 text-lg">
-                  Get Started Free
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
-                <Link to="/signin" className="btn-secondary flex items-center gap-2 text-lg">
-                  Sign In
-                </Link>
-              </>
-            )}
           </motion.div>
         </div>
       </section>
@@ -279,17 +268,7 @@ const Home = () => {
                   <Users className="w-5 h-5" />
                   View Patients
                 </Link>
-              ) : (
-                <>
-                  <Link to="/signup" className="btn-primary flex items-center gap-2">
-                    Get Started Free
-                    <ArrowRight className="w-5 h-5" />
-                  </Link>
-                  <Link to="/signin" className="btn-secondary">
-                    Already have an account?
-                  </Link>
-                </>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

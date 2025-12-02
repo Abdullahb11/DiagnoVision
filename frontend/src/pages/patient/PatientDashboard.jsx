@@ -21,14 +21,6 @@ const PatientDashboard = () => {
       textColor: 'text-primary-400'
     },
     { 
-      label: 'Risk Level', 
-      value: 'Low', 
-      icon: Shield,
-      color: 'from-accent-500 to-accent-600',
-      bgColor: 'bg-accent-500/10',
-      textColor: 'text-accent-400'
-    },
-    { 
       label: 'My Doctors', 
       value: '3', 
       icon: Users,
@@ -122,7 +114,7 @@ const PatientDashboard = () => {
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {stats.map((stat, index) => {
             const Icon = stat.icon
             return (
