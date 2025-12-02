@@ -1,5 +1,10 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { motion, AnimatePresence } from 'framer-motion'
+import { 
+  LayoutDashboard, History, ScanEye, Users, UserCheck, 
+  MessageSquare, X, Activity, Heart, Shield
+} from 'lucide-react'
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { userRole } = useAuth()
@@ -8,108 +13,215 @@ const Sidebar = ({ isOpen, onClose }) => {
   const isActive = (path) => location.pathname === path
 
   const patientNavItems = [
-    { path: '/patient/dashboard', label: 'Dashboard', icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z' },
-    { path: '/patient/history', label: 'History', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
-    { path: '/patient/scan', label: 'Eye Scan Analysis', icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
-    { path: '/patient/doctors/available', label: 'Available Doctors', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
-    { path: '/patient/doctors/my-doctors', label: 'My Doctors', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
-    { path: '/patient/messages', label: 'Messages', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
+    { 
+      path: '/patient/dashboard', 
+      label: 'Dashboard', 
+      icon: LayoutDashboard,
+      description: 'Overview & stats'
+    },
+    { 
+      path: '/patient/scan', 
+      label: 'Eye Scan Analysis', 
+      icon: ScanEye,
+      description: 'Upload & analyze'
+    },
+    { 
+      path: '/patient/history', 
+      label: 'Scan History', 
+      icon: History,
+      description: 'Past results'
+    },
+    { 
+      path: '/patient/doctors/available', 
+      label: 'Find Doctors', 
+      icon: Users,
+      description: 'Browse specialists'
+    },
+    { 
+      path: '/patient/doctors/my-doctors', 
+      label: 'My Doctors', 
+      icon: UserCheck,
+      description: 'Your care team'
+    },
+    { 
+      path: '/patient/messages', 
+      label: 'Messages', 
+      icon: MessageSquare,
+      description: 'Conversations'
+    },
   ]
 
   const doctorNavItems = [
-    { path: '/doctor/dashboard', label: 'Dashboard', icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z' },
-    { path: '/doctor/patients', label: 'My Patients', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z' },
-    { path: '/doctor/messages', label: 'Messages', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
+    { 
+      path: '/doctor/dashboard', 
+      label: 'Dashboard', 
+      icon: LayoutDashboard,
+      description: 'Overview & stats'
+    },
+    { 
+      path: '/doctor/patients', 
+      label: 'My Patients', 
+      icon: Users,
+      description: 'Patient management'
+    },
+    { 
+      path: '/doctor/messages', 
+      label: 'Messages', 
+      icon: MessageSquare,
+      description: 'Conversations'
+    },
   ]
 
   const navItems = userRole === 'patient' ? patientNavItems : userRole === 'doctor' ? doctorNavItems : []
 
-  // Debug logging
-  console.log('Sidebar - userRole:', userRole)
-  console.log('Sidebar - navItems:', navItems)
-  console.log('Sidebar - isOpen:', isOpen)
-
-  // Show sidebar even without role for debugging, but show a message
-  if (!userRole) {
-    console.log('Sidebar rendering but no userRole - showing debug message')
-    return (
-      <>
-        {isOpen && (
-          <div
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-            onClick={onClose}
-          />
-        )}
-        <aside
-          className={`w-72 bg-slate-800/50 border-r border-white/10 min-h-screen p-6 pt-24 text-lg leading-relaxed transition-transform duration-300 ${
-            isOpen ? 'translate-x-0' : '-translate-x-full'
-          } fixed top-0 left-0 z-50`}
-        >
-          <h2 className="text-emerald-300 font-semibold text-2xl mb-6">Navigation</h2>
-          <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-4 text-sm">
-            <p className="text-yellow-300 font-semibold mb-2">⚠️ No Role Found</p>
-            <p className="text-yellow-200/80">
-              User is authenticated but no role found in Firestore. Check console for details.
-            </p>
-            <p className="text-yellow-200/60 mt-2 text-xs">
-              Make sure the user document exists in Firestore 'user' collection with a 'role' field.
-            </p>
-          </div>
-        </aside>
-      </>
-    )
+  const sidebarVariants = {
+    open: { x: 0, opacity: 1 },
+    closed: { x: -320, opacity: 0 }
   }
 
-  // If no nav items but user has role, show a message
-  if (navItems.length === 0) {
+  const overlayVariants = {
+    open: { opacity: 1 },
+    closed: { opacity: 0 }
+  }
+
+  const renderContent = () => {
+    if (!userRole) {
+      return (
+        <div className="p-4">
+          <div className="glass-card p-4 border-yellow-500/30 bg-yellow-500/10">
+            <div className="flex items-center gap-3 mb-2">
+              <Shield className="w-5 h-5 text-yellow-400" />
+              <p className="text-yellow-300 font-semibold">No Role Found</p>
+            </div>
+            <p className="text-yellow-200/70 text-sm">
+              Your account role is being set up. Please refresh the page or contact support.
+            </p>
+          </div>
+        </div>
+      )
+    }
+
     return (
-      <aside className="w-72 bg-slate-800/50 border-r border-white/10 min-h-screen p-6 text-lg leading-relaxed fixed lg:static z-50">
-        <h2 className="text-emerald-300 font-semibold text-2xl mb-6">Navigation</h2>
-        <p className="text-slate-400 text-sm">
-          No navigation items available. Current role: {userRole || 'None'}
-        </p>
-      </aside>
+      <nav className="px-3 space-y-1">
+        {navItems.map((item, index) => {
+          const Icon = item.icon
+          const active = isActive(item.path)
+          
+          return (
+            <motion.div
+              key={item.path}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <Link
+                to={item.path}
+                onClick={() => window.innerWidth < 1024 && onClose()}
+                className={`group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
+                  active
+                    ? 'bg-gradient-to-r from-primary-500/20 to-primary-500/5 text-white border-l-2 border-primary-400'
+                    : 'text-dark-300 hover:text-white hover:bg-dark-800/50'
+                }`}
+              >
+                <div className={`p-2 rounded-lg transition-all duration-300 ${
+                  active 
+                    ? 'bg-primary-500/20 text-primary-400' 
+                    : 'bg-dark-800/50 text-dark-400 group-hover:bg-primary-500/10 group-hover:text-primary-400'
+                }`}>
+                  <Icon className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`font-medium truncate ${active ? 'text-white' : ''}`}>
+                    {item.label}
+                  </p>
+                  <p className={`text-xs truncate ${active ? 'text-primary-300/70' : 'text-dark-500'}`}>
+                    {item.description}
+                  </p>
+                </div>
+                {active && (
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary-400 animate-pulse" />
+                )}
+              </Link>
+            </motion.div>
+          )
+        })}
+      </nav>
     )
   }
 
   return (
     <>
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={onClose}
-        />
-      )}
-    <aside
-  className={`w-72 bg-slate-800/50 border-r border-white/10 min-h-screen p-6 pt-24 text-lg leading-relaxed transition-transform duration-300 ${
-    isOpen ? 'translate-x-0' : '-translate-x-full'
-  } fixed top-0 left-0 z-50`}
->
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            variants={overlayVariants}
+            initial="closed"
+            animate="open"
+            exit="closed"
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+            onClick={onClose}
+          />
+        )}
+      </AnimatePresence>
 
-        <h2 className="text-emerald-300 font-semibold text-2xl mb-6">Navigation</h2>
-        <nav className="space-y-3">
-          {navItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={() => window.innerWidth < 1024 && onClose()}
-              className={`flex gap-3 px-4 py-3 rounded-lg transition ${
-                isActive(item.path)
-                  ? 'bg-emerald-500/20 text-emerald-300'
-                  : 'hover:bg-emerald-500/20 hover:text-emerald-300 text-slate-300'
-              }`}
+      <motion.aside
+        variants={sidebarVariants}
+        initial="closed"
+        animate={isOpen ? "open" : "closed"}
+        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+        className="fixed top-0 left-0 z-50 w-72 h-screen lg:sticky lg:top-0 lg:h-auto lg:min-h-screen"
+      >
+        <div className="h-full bg-dark-900/95 backdrop-blur-xl border-r border-white/5 flex flex-col">
+          <div className="flex items-center justify-between p-4 pt-20 lg:pt-6 border-b border-white/5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-primary-500/20 to-medical-500/20 border border-primary-500/20">
+                {userRole === 'patient' ? (
+                  <Heart className="w-5 h-5 text-primary-400" />
+                ) : (
+                  <Activity className="w-5 h-5 text-primary-400" />
+                )}
+              </div>
+              <div>
+                <p className="font-semibold text-white">
+                  {userRole === 'patient' ? 'Patient Portal' : userRole === 'doctor' ? 'Doctor Portal' : 'Portal'}
+                </p>
+                <p className="text-xs text-dark-400">Navigation</p>
+              </div>
+            </div>
+            
+            <button
+              onClick={onClose}
+              className="lg:hidden p-2 rounded-lg text-dark-400 hover:text-white hover:bg-dark-800/50 transition-colors"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} />
-              </svg>
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-      </aside>
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto py-4 scrollbar-hide">
+            {renderContent()}
+          </div>
+
+          <div className="p-4 border-t border-white/5">
+            <div className="glass-card p-4 bg-gradient-to-br from-primary-500/10 to-medical-500/10">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-lg bg-primary-500/20">
+                  <Shield className="w-4 h-4 text-primary-400" />
+                </div>
+                <p className="text-sm font-medium text-white">Need Help?</p>
+              </div>
+              <p className="text-xs text-dark-400 mb-3">
+                Our AI assistant is here to help you with any questions.
+              </p>
+              <button className="w-full btn-secondary text-sm py-2">
+                Get Support
+              </button>
+            </div>
+          </div>
+        </div>
+      </motion.aside>
     </>
   )
 }
 
 export default Sidebar
-
