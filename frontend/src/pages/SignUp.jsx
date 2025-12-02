@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { motion } from 'framer-motion'
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Sparkles, Stethoscope, Heart } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Sparkles, Stethoscope, Heart, Loader2 } from 'lucide-react'
 
 const SignUp = () => {
   const [email, setEmail] = useState('')
@@ -240,6 +240,36 @@ const SignUp = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Loading Overlay */}
+      <AnimatePresence>
+        {loading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-dark-950/95 backdrop-blur-sm z-50 flex items-center justify-center"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="text-center"
+            >
+              <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-primary-500/20 to-medical-500/20 flex items-center justify-center">
+                <Loader2 className="w-10 h-10 text-primary-400 animate-spin" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">Creating Your Account</h3>
+              <p className="text-dark-400 mb-4">Please wait while we set up your account...</p>
+              <div className="flex justify-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-primary-400 animate-bounce" style={{ animationDelay: '0s' }} />
+                <div className="w-2 h-2 rounded-full bg-primary-400 animate-bounce" style={{ animationDelay: '0.2s' }} />
+                <div className="w-2 h-2 rounded-full bg-primary-400 animate-bounce" style={{ animationDelay: '0.4s' }} />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

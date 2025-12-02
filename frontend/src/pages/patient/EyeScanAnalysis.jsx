@@ -91,7 +91,14 @@ const EyeScanAnalysis = () => {
       const data = await response.json()
 
       if (data.success) {
-        setAnalysisResults(data)
+        // Use base64 images for immediate display, fallback to URLs if available
+        setAnalysisResults({
+          ...data,
+          // Prioritize base64 for immediate display, URLs will be null initially
+          image_url: data.image_base64 || data.image_url,
+          heatmap_url: data.heatmap_base64 || data.heatmap_url,
+          overlay_url: data.overlay_base64 || data.overlay_url,
+        })
 
         try {
           const currentDate = new Date().toISOString()
@@ -100,6 +107,8 @@ const EyeScanAnalysis = () => {
             await addDoc(collection(db, 'glucoma_result'), {
               patientId: currentUser.uid,
               result_msg: data.glaucoma.result_msg,
+              confidence: data.glaucoma.confidence,
+              prediction: data.glaucoma.prediction || '',
               imageId: data.image_id,
               doctor_feedback: '',
               date: currentDate
@@ -110,6 +119,8 @@ const EyeScanAnalysis = () => {
             await addDoc(collection(db, 'dr_result'), {
               patientId: currentUser.uid,
               result_msg: data.dr.result_msg,
+              confidence: data.dr.confidence,
+              prediction: data.dr.prediction || '',
               imageId: data.image_id,
               doctor_feedback: '',
               date: currentDate
@@ -395,7 +406,9 @@ const EyeScanAnalysis = () => {
                 </div>
               </div>
 
-              {(analysisResults.image_url || analysisResults.heatmap_url || analysisResults.overlay_url) && (
+              {(analysisResults.image_url || analysisResults.image_base64 || 
+                analysisResults.heatmap_url || analysisResults.heatmap_base64 || 
+                analysisResults.overlay_url || analysisResults.overlay_base64) && (
                 <div className="glass-card p-6 md:p-8">
                   <div className="flex items-center gap-3 mb-6">
                     <Image className="w-5 h-5 text-primary-400" />
@@ -403,31 +416,31 @@ const EyeScanAnalysis = () => {
                   </div>
 
                   <div className="grid md:grid-cols-3 gap-6">
-                    {analysisResults.image_url && (
+                    {(analysisResults.image_url || analysisResults.image_base64) && (
                       <div>
                         <p className="text-sm font-medium text-primary-400 mb-3 text-center">Original</p>
                         <img
-                          src={analysisResults.image_url}
+                          src={analysisResults.image_url || analysisResults.image_base64}
                           alt="Original"
                           className="w-full rounded-xl border border-white/10"
                         />
                       </div>
                     )}
-                    {analysisResults.heatmap_url && (
+                    {(analysisResults.heatmap_url || analysisResults.heatmap_base64) && (
                       <div>
                         <p className="text-sm font-medium text-primary-400 mb-3 text-center">GradCAM Heatmap</p>
                         <img
-                          src={analysisResults.heatmap_url}
+                          src={analysisResults.heatmap_url || analysisResults.heatmap_base64}
                           alt="Heatmap"
                           className="w-full rounded-xl border border-white/10"
                         />
                       </div>
                     )}
-                    {analysisResults.overlay_url && (
+                    {(analysisResults.overlay_url || analysisResults.overlay_base64) && (
                       <div>
                         <p className="text-sm font-medium text-primary-400 mb-3 text-center">Overlay</p>
                         <img
-                          src={analysisResults.overlay_url}
+                          src={analysisResults.overlay_url || analysisResults.overlay_base64}
                           alt="Overlay"
                           className="w-full rounded-xl border border-white/10"
                         />
