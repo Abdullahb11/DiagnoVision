@@ -137,6 +137,7 @@ class SupabaseService:
     ):
         """
         Upload images to Supabase asynchronously (non-blocking background task)
+        Uploads 5 images: original + 2 Glaucoma (heatmap, overlay) + 2 DR (heatmap, overlay)
         
         Args:
             image_id: Pre-generated image ID
@@ -155,41 +156,74 @@ class SupabaseService:
             )
             original_url = self.supabase.storage.from_("images").get_public_url(original_path)
             
-            # Use Glaucoma GradCAM (or DR if Glaucoma not available)
-            gradcam_data = glaucoma_gradcam if glaucoma_gradcam and glaucoma_gradcam.get("heatmap_only") is not None else dr_gradcam
+            # Initialize URLs
+            glaucoma_heatmap_url = None
+            glaucoma_overlay_url = None
+            dr_heatmap_url = None
+            dr_overlay_url = None
             
-            heatmap_url = None
-            overlay_url = None
-            
-            if gradcam_data and gradcam_data.get("heatmap_only") is not None:
-                # Upload heatmap only (colored heatmap)
-                heatmap_bytes = self._heatmap_to_bytes(gradcam_data["heatmap_only"])
-                heatmap_path = f"images/{patient_id}/{image_id}_heatmap.jpg"
+            # Upload Glaucoma GradCAM images
+            if glaucoma_gradcam and glaucoma_gradcam.get("heatmap_only") is not None:
+                # Upload Glaucoma heatmap
+                glaucoma_heatmap_bytes = self._heatmap_to_bytes(glaucoma_gradcam["heatmap_only"])
+                glaucoma_heatmap_path = f"images/{patient_id}/{image_id}_glaucoma_heatmap.jpg"
                 self.supabase.storage.from_("images").upload(
-                    heatmap_path,
-                    heatmap_bytes,
+                    glaucoma_heatmap_path,
+                    glaucoma_heatmap_bytes,
                     file_options={"content-type": "image/jpeg"}
                 )
-                heatmap_url = self.supabase.storage.from_("images").get_public_url(heatmap_path)
+                glaucoma_heatmap_url = self.supabase.storage.from_("images").get_public_url(glaucoma_heatmap_path)
                 
-                # Upload overlay (original + heatmap)
-                if gradcam_data.get("overlay") is not None:
-                    overlay_bytes = self._heatmap_to_bytes(gradcam_data["overlay"])
-                    overlay_path = f"images/{patient_id}/{image_id}_overlay.jpg"
+                # Upload Glaucoma overlay
+                if glaucoma_gradcam.get("overlay") is not None:
+                    glaucoma_overlay_bytes = self._heatmap_to_bytes(glaucoma_gradcam["overlay"])
+                    glaucoma_overlay_path = f"images/{patient_id}/{image_id}_glaucoma_overlay.jpg"
                     self.supabase.storage.from_("images").upload(
-                        overlay_path,
-                        overlay_bytes,
+                        glaucoma_overlay_path,
+                        glaucoma_overlay_bytes,
                         file_options={"content-type": "image/jpeg"}
                     )
-                    overlay_url = self.supabase.storage.from_("images").get_public_url(overlay_path)
+                    glaucoma_overlay_url = self.supabase.storage.from_("images").get_public_url(glaucoma_overlay_path)
             
-            # Store metadata in images table (all three URLs)
+            # Upload DR GradCAM images
+            if dr_gradcam and dr_gradcam.get("heatmap_only") is not None:
+                # Upload DR heatmap
+                dr_heatmap_bytes = self._heatmap_to_bytes(dr_gradcam["heatmap_only"])
+                dr_heatmap_path = f"images/{patient_id}/{image_id}_dr_heatmap.jpg"
+                self.supabase.storage.from_("images").upload(
+                    dr_heatmap_path,
+                    dr_heatmap_bytes,
+                    file_options={"content-type": "image/jpeg"}
+                )
+                dr_heatmap_url = self.supabase.storage.from_("images").get_public_url(dr_heatmap_path)
+                
+                # Upload DR overlay
+                if dr_gradcam.get("overlay") is not None:
+                    dr_overlay_bytes = self._heatmap_to_bytes(dr_gradcam["overlay"])
+                    dr_overlay_path = f"images/{patient_id}/{image_id}_dr_overlay.jpg"
+                    self.supabase.storage.from_("images").upload(
+                        dr_overlay_path,
+                        dr_overlay_bytes,
+                        file_options={"content-type": "image/jpeg"}
+                    )
+                    dr_overlay_url = self.supabase.storage.from_("images").get_public_url(dr_overlay_path)
+            
+            # For backward compatibility, use Glaucoma URLs as default (or DR if Glaucoma not available)
+            default_heatmap_url = glaucoma_heatmap_url or dr_heatmap_url
+            default_overlay_url = glaucoma_overlay_url or dr_overlay_url
+            
+            # Store metadata in images table with all URLs
             self.supabase.table("images").insert({
                 "imageId": image_id,
                 "Image_url": original_url,
-                "heatmap_url": heatmap_url,
-                "overlay_url": overlay_url,
-                "grad_cam_url": overlay_url if overlay_url else original_url  # For backward compatibility
+                "glaucoma_heatmap_url": glaucoma_heatmap_url,
+                "glaucoma_overlay_url": glaucoma_overlay_url,
+                "dr_heatmap_url": dr_heatmap_url,
+                "dr_overlay_url": dr_overlay_url,
+                # Backward compatibility columns
+                "heatmap_url": default_heatmap_url,
+                "overlay_url": default_overlay_url,
+                "grad_cam_url": default_overlay_url if default_overlay_url else original_url
             }).execute()
             
             logger.info(f"Images uploaded to Supabase for image_id: {image_id}")

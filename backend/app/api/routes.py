@@ -66,20 +66,29 @@ async def analyze_image(
         # Convert images to base64 for immediate display
         original_base64 = base64.b64encode(image_bytes).decode('utf-8')
         
-        # Use Glaucoma GradCAM (or DR if Glaucoma not available)
-        gradcam_data = glaucoma_gradcam_dict if glaucoma_gradcam_dict and glaucoma_gradcam_dict.get("heatmap_only") is not None else dr_gradcam_dict
+        # Convert Glaucoma GradCAM to base64
+        glaucoma_heatmap_base64 = None
+        glaucoma_overlay_base64 = None
+        if glaucoma_gradcam_dict and glaucoma_gradcam_dict.get("heatmap_only") is not None:
+            glaucoma_heatmap_bytes = supabase_service._heatmap_to_bytes(glaucoma_gradcam_dict["heatmap_only"])
+            glaucoma_heatmap_base64 = base64.b64encode(glaucoma_heatmap_bytes).decode('utf-8')
+            if glaucoma_gradcam_dict.get("overlay") is not None:
+                glaucoma_overlay_bytes = supabase_service._heatmap_to_bytes(glaucoma_gradcam_dict["overlay"])
+                glaucoma_overlay_base64 = base64.b64encode(glaucoma_overlay_bytes).decode('utf-8')
         
-        heatmap_base64 = None
-        overlay_base64 = None
+        # Convert DR GradCAM to base64
+        dr_heatmap_base64 = None
+        dr_overlay_base64 = None
+        if dr_gradcam_dict and dr_gradcam_dict.get("heatmap_only") is not None:
+            dr_heatmap_bytes = supabase_service._heatmap_to_bytes(dr_gradcam_dict["heatmap_only"])
+            dr_heatmap_base64 = base64.b64encode(dr_heatmap_bytes).decode('utf-8')
+            if dr_gradcam_dict.get("overlay") is not None:
+                dr_overlay_bytes = supabase_service._heatmap_to_bytes(dr_gradcam_dict["overlay"])
+                dr_overlay_base64 = base64.b64encode(dr_overlay_bytes).decode('utf-8')
         
-        if gradcam_data:
-            if gradcam_data.get("heatmap_only") is not None:
-                heatmap_bytes = supabase_service._heatmap_to_bytes(gradcam_data["heatmap_only"])
-                heatmap_base64 = base64.b64encode(heatmap_bytes).decode('utf-8')
-            
-            if gradcam_data.get("overlay") is not None:
-                overlay_bytes = supabase_service._heatmap_to_bytes(gradcam_data["overlay"])
-                overlay_base64 = base64.b64encode(overlay_bytes).decode('utf-8')
+        # For backward compatibility, use Glaucoma (or DR if Glaucoma not available)
+        default_heatmap_base64 = glaucoma_heatmap_base64 or dr_heatmap_base64
+        default_overlay_base64 = glaucoma_overlay_base64 or dr_overlay_base64
         
         # Upload to Supabase in background (non-blocking)
         asyncio.create_task(
@@ -111,8 +120,15 @@ async def analyze_image(
             },
             # Base64 images for immediate display
             "image_base64": f"data:image/jpeg;base64,{original_base64}",
-            "heatmap_base64": f"data:image/jpeg;base64,{heatmap_base64}" if heatmap_base64 else None,
-            "overlay_base64": f"data:image/jpeg;base64,{overlay_base64}" if overlay_base64 else None,
+            # Glaucoma images
+            "glaucoma_heatmap_base64": f"data:image/jpeg;base64,{glaucoma_heatmap_base64}" if glaucoma_heatmap_base64 else None,
+            "glaucoma_overlay_base64": f"data:image/jpeg;base64,{glaucoma_overlay_base64}" if glaucoma_overlay_base64 else None,
+            # DR images
+            "dr_heatmap_base64": f"data:image/jpeg;base64,{dr_heatmap_base64}" if dr_heatmap_base64 else None,
+            "dr_overlay_base64": f"data:image/jpeg;base64,{dr_overlay_base64}" if dr_overlay_base64 else None,
+            # Backward compatibility
+            "heatmap_base64": f"data:image/jpeg;base64,{default_heatmap_base64}" if default_heatmap_base64 else None,
+            "overlay_base64": f"data:image/jpeg;base64,{default_overlay_base64}" if default_overlay_base64 else None,
             # URLs will be available after async upload completes (for history)
             # These will be null initially but that's OK - history page will fetch from Supabase
             "image_url": None,
