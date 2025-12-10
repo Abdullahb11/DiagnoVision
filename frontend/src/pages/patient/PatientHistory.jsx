@@ -329,8 +329,9 @@ const PatientHistory = () => {
                         handleToggleScan(scan)
                       }}
                     >
-                      <div className="flex flex-col md:flex-row md:items-center gap-6">
-                        <div className="flex items-center gap-4 flex-1">
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+                        {/* Scan Info - 2 columns */}
+                        <div className="flex items-center gap-4 lg:col-span-2">
                           <div className="p-3 rounded-xl bg-primary-500/10">
                             <Eye className="w-6 h-6 text-primary-400" />
                           </div>
@@ -343,7 +344,8 @@ const PatientHistory = () => {
                           </div>
                         </div>
 
-                        <div className="flex-1 space-y-2">
+                        {/* Results - 6 columns */}
+                        <div className="lg:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                           {scan.glaucomaResult && (
                             <div>
                               <p className="text-xs text-dark-500 mb-1">Glaucoma Detection</p>
@@ -372,8 +374,9 @@ const PatientHistory = () => {
                           )}
                         </div>
 
-                        <div className="flex items-center gap-4">
-                          <div className="flex flex-col gap-2">
+                        {/* Status Badges and Expand Button - 4 columns */}
+                        <div className="lg:col-span-4 flex items-center justify-end gap-4">
+                          <div className="flex flex-row gap-2">
                             {scan.glaucomaResult && (
                               <span className={getStatusBadge(glaucomaStatus)}>
                                 {glaucomaStatus === 'success' ? 'Normal' : glaucomaStatus === 'warning' ? 'Needs Review' : 'High Risk'}
@@ -424,7 +427,7 @@ const PatientHistory = () => {
                                 <>
                                   {(images.original || images.glaucomaHeatmap || images.glaucomaOverlay || images.drHeatmap || images.drOverlay) ? (
                                     <div className="space-y-6">
-                                      {/* Original Image */}
+                                      {/* Original Image - Full Width */}
                                       {images.original && (
                                         <div>
                                           <h5 className="text-xs font-semibold text-white mb-3">Original Image</h5>
@@ -432,18 +435,19 @@ const PatientHistory = () => {
                                             <img
                                               src={images.original}
                                               alt="Original scan"
-                                              className="w-full max-w-md rounded-xl border border-white/10 hover:border-primary-500/50 transition-colors cursor-pointer"
+                                              className="w-full max-w-2xl rounded-xl border border-white/10 hover:border-primary-500/50 transition-colors cursor-pointer"
                                               onClick={() => window.open(images.original, '_blank')}
                                             />
                                           </div>
                                         </div>
                                       )}
 
-                                      {/* Glaucoma Visualizations */}
-                                      {(images.glaucomaHeatmap || images.glaucomaOverlay) && (
+                                      {/* All Analysis Images in Grid Layout */}
+                                      {(images.glaucomaHeatmap || images.glaucomaOverlay || images.drHeatmap || images.drOverlay) && (
                                         <div>
-                                          <h5 className="text-xs font-semibold text-white mb-3">Glaucoma Analysis</h5>
-                                          <div className="grid md:grid-cols-2 gap-4">
+                                          <h5 className="text-xs font-semibold text-white mb-4">Analysis Visualizations</h5>
+                                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                            {/* Glaucoma Heatmap */}
                                             {images.glaucomaHeatmap && (
                                               <div>
                                                 <p className="text-xs text-dark-500 mb-2 text-center">Glaucoma Heatmap</p>
@@ -455,6 +459,7 @@ const PatientHistory = () => {
                                                 />
                                               </div>
                                             )}
+                                            {/* Glaucoma Overlay */}
                                             {images.glaucomaOverlay && (
                                               <div>
                                                 <p className="text-xs text-dark-500 mb-2 text-center">Glaucoma Overlay</p>
@@ -466,15 +471,7 @@ const PatientHistory = () => {
                                                 />
                                               </div>
                                             )}
-                                          </div>
-                                        </div>
-                                      )}
-
-                                      {/* DR Visualizations */}
-                                      {(images.drHeatmap || images.drOverlay) && (
-                                        <div>
-                                          <h5 className="text-xs font-semibold text-white mb-3">Diabetic Retinopathy Analysis</h5>
-                                          <div className="grid md:grid-cols-2 gap-4">
+                                            {/* DR Heatmap */}
                                             {images.drHeatmap && (
                                               <div>
                                                 <p className="text-xs text-dark-500 mb-2 text-center">DR Heatmap</p>
@@ -486,6 +483,7 @@ const PatientHistory = () => {
                                                 />
                                               </div>
                                             )}
+                                            {/* DR Overlay */}
                                             {images.drOverlay && (
                                               <div>
                                                 <p className="text-xs text-dark-500 mb-2 text-center">DR Overlay</p>
