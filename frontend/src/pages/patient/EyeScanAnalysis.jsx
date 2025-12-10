@@ -96,6 +96,13 @@ const EyeScanAnalysis = () => {
           ...data,
           // Prioritize base64 for immediate display, URLs will be null initially
           image_url: data.image_base64 || data.image_url,
+          // Glaucoma images
+          glaucoma_heatmap_url: data.glaucoma_heatmap_base64 || data.glaucoma_heatmap_url,
+          glaucoma_overlay_url: data.glaucoma_overlay_base64 || data.glaucoma_overlay_url,
+          // DR images
+          dr_heatmap_url: data.dr_heatmap_base64 || data.dr_heatmap_url,
+          dr_overlay_url: data.dr_overlay_base64 || data.dr_overlay_url,
+          // Backward compatibility
           heatmap_url: data.heatmap_base64 || data.heatmap_url,
           overlay_url: data.overlay_base64 || data.overlay_url,
         })
@@ -407,46 +414,96 @@ const EyeScanAnalysis = () => {
               </div>
 
               {(analysisResults.image_url || analysisResults.image_base64 || 
-                analysisResults.heatmap_url || analysisResults.heatmap_base64 || 
-                analysisResults.overlay_url || analysisResults.overlay_base64) && (
+                analysisResults.glaucoma_heatmap_url || analysisResults.glaucoma_overlay_url ||
+                analysisResults.dr_heatmap_url || analysisResults.dr_overlay_url) && (
                 <div className="glass-card p-6 md:p-8">
                   <div className="flex items-center gap-3 mb-6">
                     <Image className="w-5 h-5 text-primary-400" />
                     <h2 className="text-xl font-semibold text-white">Visual Analysis</h2>
                   </div>
 
-                  <div className="grid md:grid-cols-3 gap-6">
-                    {(analysisResults.image_url || analysisResults.image_base64) && (
-                      <div>
-                        <p className="text-sm font-medium text-primary-400 mb-3 text-center">Original</p>
+                  {/* Original Image */}
+                  {(analysisResults.image_url || analysisResults.image_base64) && (
+                    <div className="mb-8">
+                      <h3 className="text-sm font-semibold text-white mb-4">Original Image</h3>
+                      <div className="flex justify-center">
                         <img
                           src={analysisResults.image_url || analysisResults.image_base64}
                           alt="Original"
-                          className="w-full rounded-xl border border-white/10"
+                          className="w-full max-w-md rounded-xl border border-white/10 hover:border-primary-500/50 transition-colors cursor-pointer"
+                          onClick={() => window.open(analysisResults.image_url || analysisResults.image_base64, '_blank')}
                         />
                       </div>
-                    )}
-                    {(analysisResults.heatmap_url || analysisResults.heatmap_base64) && (
-                      <div>
-                        <p className="text-sm font-medium text-primary-400 mb-3 text-center">GradCAM Heatmap</p>
-                        <img
-                          src={analysisResults.heatmap_url || analysisResults.heatmap_base64}
-                          alt="Heatmap"
-                          className="w-full rounded-xl border border-white/10"
-                        />
+                    </div>
+                  )}
+
+                  {/* Glaucoma Visualizations */}
+                  {(analysisResults.glaucoma_heatmap_url || analysisResults.glaucoma_overlay_url) && (
+                    <div className="mb-8">
+                      <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-primary-400" />
+                        Glaucoma Analysis
+                      </h3>
+                      <div className="grid md:grid-cols-2 gap-6">
+                        {analysisResults.glaucoma_heatmap_url && (
+                          <div>
+                            <p className="text-xs text-dark-500 mb-2 text-center">Glaucoma Heatmap</p>
+                            <img
+                              src={analysisResults.glaucoma_heatmap_url}
+                              alt="Glaucoma Heatmap"
+                              className="w-full rounded-xl border border-white/10 hover:border-primary-500/50 transition-colors cursor-pointer"
+                              onClick={() => window.open(analysisResults.glaucoma_heatmap_url, '_blank')}
+                            />
+                          </div>
+                        )}
+                        {analysisResults.glaucoma_overlay_url && (
+                          <div>
+                            <p className="text-xs text-dark-500 mb-2 text-center">Glaucoma Overlay</p>
+                            <img
+                              src={analysisResults.glaucoma_overlay_url}
+                              alt="Glaucoma Overlay"
+                              className="w-full rounded-xl border border-white/10 hover:border-primary-500/50 transition-colors cursor-pointer"
+                              onClick={() => window.open(analysisResults.glaucoma_overlay_url, '_blank')}
+                            />
+                          </div>
+                        )}
                       </div>
-                    )}
-                    {(analysisResults.overlay_url || analysisResults.overlay_base64) && (
-                      <div>
-                        <p className="text-sm font-medium text-primary-400 mb-3 text-center">Overlay</p>
-                        <img
-                          src={analysisResults.overlay_url || analysisResults.overlay_base64}
-                          alt="Overlay"
-                          className="w-full rounded-xl border border-white/10"
-                        />
+                    </div>
+                  )}
+
+                  {/* DR Visualizations */}
+                  {(analysisResults.dr_heatmap_url || analysisResults.dr_overlay_url) && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                        <Brain className="w-4 h-4 text-accent-400" />
+                        Diabetic Retinopathy Analysis
+                      </h3>
+                      <div className="grid md:grid-cols-2 gap-6">
+                        {analysisResults.dr_heatmap_url && (
+                          <div>
+                            <p className="text-xs text-dark-500 mb-2 text-center">DR Heatmap</p>
+                            <img
+                              src={analysisResults.dr_heatmap_url}
+                              alt="DR Heatmap"
+                              className="w-full rounded-xl border border-white/10 hover:border-accent-500/50 transition-colors cursor-pointer"
+                              onClick={() => window.open(analysisResults.dr_heatmap_url, '_blank')}
+                            />
+                          </div>
+                        )}
+                        {analysisResults.dr_overlay_url && (
+                          <div>
+                            <p className="text-xs text-dark-500 mb-2 text-center">DR Overlay</p>
+                            <img
+                              src={analysisResults.dr_overlay_url}
+                              alt="DR Overlay"
+                              className="w-full rounded-xl border border-white/10 hover:border-accent-500/50 transition-colors cursor-pointer"
+                              onClick={() => window.open(analysisResults.dr_overlay_url, '_blank')}
+                            />
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               )}
 

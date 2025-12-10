@@ -36,20 +36,22 @@ class DRPipeline:
             prediction = self.model.predict(preprocessed_image)
             logger.debug(f"DR prediction: {prediction['prediction']} (confidence: {prediction['confidence']:.2f})")
             
-            # Step 3: Generate GradCAM (placeholder for now - DR model not implemented)
-            # For now, return None for DR GradCAM since model is not ready
-            logger.debug("DR GradCAM placeholder - model not implemented")
+            # Step 3: Generate GradCAM with heatmap and overlay (use predicted class index)
+            # Class indices: 0=No DR, 1=Mild/Mod, 2=Severe, 3=Proliferative
+            predicted_class_idx = prediction.get("predicted_class_idx", 0)
+            gradcam_results = self.gradcam.generate_gradcam(preprocessed_image, image_bytes, predicted_class_idx)
+            logger.debug("GradCAM generated for DR")
             
             # Format result message
             result_msg = self._format_result_message(prediction)
             
-            # Return None for DR GradCAM (will be handled in Supabase service)
             return {
                 "result_msg": result_msg,
                 "confidence": prediction["confidence"],
                 "prediction": prediction["prediction"],
-                "gradcam_heatmap": None,
-                "gradcam_overlay": None,
+                "predicted_class": prediction.get("predicted_class", ""),
+                "gradcam_heatmap": gradcam_results["heatmap_only"],
+                "gradcam_overlay": gradcam_results["overlay"],
                 "raw_output": prediction.get("raw_output", [])
             }
             
@@ -60,10 +62,9 @@ class DRPipeline:
     def _format_result_message(self, prediction: dict) -> str:
         """Format prediction result into human-readable message"""
         confidence = prediction["confidence"]
-        pred = prediction["prediction"]
+        predicted_class = prediction.get("predicted_class", "")
         
-        if "No signs" in pred or confidence < 0.5:
+        if predicted_class == "No DR" and confidence > 0.5:
             return f"No signs of Diabetic Retinopathy detected (confidence: {confidence:.1%})"
         else:
-            return f"Signs of Diabetic Retinopathy detected (confidence: {confidence:.1%})"
-
+            return f"Signs of Diabetic Retinopathy detected - {predicted_class} (confidence: {confidence:.1%})"

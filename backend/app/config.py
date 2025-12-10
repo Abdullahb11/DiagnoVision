@@ -1,7 +1,12 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Get the backend directory (parent of app directory)
+BACKEND_DIR = Path(__file__).parent.parent
+MODELS_DIR = BACKEND_DIR / "models"
 
 class Settings:
     # Supabase Configuration
@@ -15,9 +20,9 @@ class Settings:
     API_PORT = int(os.getenv("API_PORT", 8000))
     API_HOST = os.getenv("API_HOST", "0.0.0.0")
     
-    # Model Paths
-    GLAUCOMA_MODEL_PATH = os.getenv("GLAUCOMA_MODEL_PATH", "./models/glaucoma_mobilenet_best.pth")
-    DR_MODEL_PATH = os.getenv("DR_MODEL_PATH", "./models/dr_model.h5")
+    # Model Paths - Resolve relative to backend directory
+    GLAUCOMA_MODEL_PATH = os.getenv("GLAUCOMA_MODEL_PATH") or str(MODELS_DIR / "glaucoma_mobilenet_best.pth")
+    DR_MODEL_PATH = os.getenv("DR_MODEL_PATH") or str(MODELS_DIR / "efficientnet_b3_final_aptos.pth")
     
     @classmethod
     def validate(cls):
