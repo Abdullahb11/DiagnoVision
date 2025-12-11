@@ -200,26 +200,11 @@ const PatientHistory = () => {
     }
   }
 
-  const getStatus = (confidence, resultMsg) => {
-    if (!confidence || !resultMsg) return 'success'
-    
-    // Check if result indicates "No signs" or "Signs detected"
-    const isNoSigns = resultMsg.toLowerCase().includes('no signs') || 
-                      resultMsg.toLowerCase().includes('no signs of')
-    
-    if (isNoSigns) {
-      // High confidence for "No signs" = Good (Normal)
-      // Low confidence for "No signs" = Needs Review (uncertain)
-      if (confidence >= 0.7) return 'success'  // High confidence no disease = Normal
-      if (confidence >= 0.5) return 'warning'  // Medium confidence = Needs Review
-      return 'warning'  // Low confidence = Needs Review
-    } else {
-      // High confidence for "Signs detected" = Bad (High Risk)
-      // Low confidence for "Signs detected" = Needs Review (uncertain)
-      if (confidence >= 0.7) return 'danger'   // High confidence disease = High Risk
-      if (confidence >= 0.5) return 'warning'  // Medium confidence = Needs Review
-      return 'warning'  // Low confidence = Needs Review
-    }
+  const getStatus = (glaucomaConfidence) => {
+    if (!glaucomaConfidence) return 'success'
+    if (glaucomaConfidence >= 0.7) return 'danger'
+    if (glaucomaConfidence >= 0.5) return 'warning'
+    return 'success'
   }
 
   const getStatusBadge = (status) => {
@@ -228,26 +213,11 @@ const PatientHistory = () => {
     return 'badge-danger'
   }
 
-  const getConfidenceColor = (confidence, resultMsg) => {
-    if (!confidence || !resultMsg) return 'text-dark-400'
-    
-    // Check if result indicates "No signs" or "Signs detected"
-    const isNoSigns = resultMsg.toLowerCase().includes('no signs') || 
-                      resultMsg.toLowerCase().includes('no signs of')
-    
-    if (isNoSigns) {
-      // High confidence for "No signs" = Green (good)
-      // Low confidence for "No signs" = Yellow (uncertain)
-      if (confidence >= 0.7) return 'text-accent-400'  // Green for high confidence no disease
-      if (confidence >= 0.5) return 'text-yellow-400'  // Yellow for medium confidence
-      return 'text-yellow-400'  // Yellow for low confidence
-    } else {
-      // High confidence for "Signs detected" = Red (bad)
-      // Low confidence for "Signs detected" = Yellow (uncertain)
-      if (confidence >= 0.7) return 'text-red-400'    // Red for high confidence disease
-      if (confidence >= 0.5) return 'text-yellow-400'  // Yellow for medium confidence
-      return 'text-yellow-400'  // Yellow for low confidence
-    }
+  const getConfidenceColor = (confidence) => {
+    if (!confidence) return 'text-dark-400'
+    if (confidence >= 0.7) return 'text-red-400'
+    if (confidence >= 0.5) return 'text-yellow-400'
+    return 'text-accent-400'
   }
 
   return (
@@ -299,8 +269,8 @@ const PatientHistory = () => {
               className="space-y-4"
             >
               {scanHistory.map((scan, index) => {
-                const glaucomaStatus = getStatus(scan.glaucomaConfidence, scan.glaucomaResult)
-                const drStatus = getStatus(scan.drConfidence, scan.drResult)
+                const glaucomaStatus = getStatus(scan.glaucomaConfidence)
+                const drStatus = getStatus(scan.drConfidence)
                 const images = imageData[scan.imageId] || {}
                 const isExpanded = expandedScan === scan.id
                 const isImageLoading = imageLoading[scan.imageId]
@@ -329,9 +299,8 @@ const PatientHistory = () => {
                         handleToggleScan(scan)
                       }}
                     >
-                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
-                        {/* Scan Info - 2 columns */}
-                        <div className="flex items-center gap-4 lg:col-span-2">
+                      <div className="flex flex-col md:flex-row md:items-center gap-6">
+                        <div className="flex items-center gap-4 flex-1">
                           <div className="p-3 rounded-xl bg-primary-500/10">
                             <Eye className="w-6 h-6 text-primary-400" />
                           </div>
@@ -344,12 +313,11 @@ const PatientHistory = () => {
                           </div>
                         </div>
 
-                        {/* Results - 6 columns */}
-                        <div className="lg:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex-1 space-y-2">
                           {scan.glaucomaResult && (
                             <div>
                               <p className="text-xs text-dark-500 mb-1">Glaucoma Detection</p>
-                              <p className={`text-sm font-medium ${getConfidenceColor(scan.glaucomaConfidence, scan.glaucomaResult)}`}>
+                              <p className={`text-sm font-medium ${getConfidenceColor(scan.glaucomaConfidence)}`}>
                                 {scan.glaucomaResult}
                               </p>
                               {scan.glaucomaConfidence !== null && (
@@ -362,7 +330,7 @@ const PatientHistory = () => {
                           {scan.drResult && (
                             <div>
                               <p className="text-xs text-dark-500 mb-1">DR Detection</p>
-                              <p className={`text-sm font-medium ${getConfidenceColor(scan.drConfidence, scan.drResult)}`}>
+                              <p className={`text-sm font-medium ${getConfidenceColor(scan.drConfidence)}`}>
                                 {scan.drResult}
                               </p>
                               {scan.drConfidence !== null && (
@@ -374,9 +342,8 @@ const PatientHistory = () => {
                           )}
                         </div>
 
-                        {/* Status Badges and Expand Button - 4 columns */}
-                        <div className="lg:col-span-4 flex items-center justify-end gap-4">
-                          <div className="flex flex-row gap-2">
+                        <div className="flex items-center gap-4">
+                          <div className="flex flex-col gap-2">
                             {scan.glaucomaResult && (
                               <span className={getStatusBadge(glaucomaStatus)}>
                                 {glaucomaStatus === 'success' ? 'Normal' : glaucomaStatus === 'warning' ? 'Needs Review' : 'High Risk'}
@@ -427,7 +394,7 @@ const PatientHistory = () => {
                                 <>
                                   {(images.original || images.glaucomaHeatmap || images.glaucomaOverlay || images.drHeatmap || images.drOverlay) ? (
                                     <div className="space-y-6">
-                                      {/* Original Image - Full Width */}
+                                      {/* Original Image */}
                                       {images.original && (
                                         <div>
                                           <h5 className="text-xs font-semibold text-white mb-3">Original Image</h5>
@@ -435,19 +402,18 @@ const PatientHistory = () => {
                                             <img
                                               src={images.original}
                                               alt="Original scan"
-                                              className="w-full max-w-2xl rounded-xl border border-white/10 hover:border-primary-500/50 transition-colors cursor-pointer"
+                                              className="w-full max-w-md rounded-xl border border-white/10 hover:border-primary-500/50 transition-colors cursor-pointer"
                                               onClick={() => window.open(images.original, '_blank')}
                                             />
                                           </div>
                                         </div>
                                       )}
 
-                                      {/* All Analysis Images in Grid Layout */}
-                                      {(images.glaucomaHeatmap || images.glaucomaOverlay || images.drHeatmap || images.drOverlay) && (
+                                      {/* Glaucoma Visualizations */}
+                                      {(images.glaucomaHeatmap || images.glaucomaOverlay) && (
                                         <div>
-                                          <h5 className="text-xs font-semibold text-white mb-4">Analysis Visualizations</h5>
-                                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                            {/* Glaucoma Heatmap */}
+                                          <h5 className="text-xs font-semibold text-white mb-3">Glaucoma Analysis</h5>
+                                          <div className="grid md:grid-cols-2 gap-4">
                                             {images.glaucomaHeatmap && (
                                               <div>
                                                 <p className="text-xs text-dark-500 mb-2 text-center">Glaucoma Heatmap</p>
@@ -459,7 +425,6 @@ const PatientHistory = () => {
                                                 />
                                               </div>
                                             )}
-                                            {/* Glaucoma Overlay */}
                                             {images.glaucomaOverlay && (
                                               <div>
                                                 <p className="text-xs text-dark-500 mb-2 text-center">Glaucoma Overlay</p>
@@ -471,7 +436,15 @@ const PatientHistory = () => {
                                                 />
                                               </div>
                                             )}
-                                            {/* DR Heatmap */}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* DR Visualizations */}
+                                      {(images.drHeatmap || images.drOverlay) && (
+                                        <div>
+                                          <h5 className="text-xs font-semibold text-white mb-3">Diabetic Retinopathy Analysis</h5>
+                                          <div className="grid md:grid-cols-2 gap-4">
                                             {images.drHeatmap && (
                                               <div>
                                                 <p className="text-xs text-dark-500 mb-2 text-center">DR Heatmap</p>
@@ -483,7 +456,6 @@ const PatientHistory = () => {
                                                 />
                                               </div>
                                             )}
-                                            {/* DR Overlay */}
                                             {images.drOverlay && (
                                               <div>
                                                 <p className="text-xs text-dark-500 mb-2 text-center">DR Overlay</p>

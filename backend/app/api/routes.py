@@ -38,14 +38,14 @@ async def analyze_image(
         # Read image file
         image_bytes = await image.read()
         
-        # Run both pipelines
+        # Run both pipelines in parallel for faster execution
         logger.info(f"Starting analysis for patient {patient_id}")
         
-        # Run Glaucoma pipeline
-        glaucoma_result = await glaucoma_pipeline.process(image_bytes, patient_id)
-        
-        # Run DR pipeline
-        dr_result = await dr_pipeline.process(image_bytes, patient_id)
+        # Run Glaucoma and DR pipelines in parallel using asyncio.gather()
+        glaucoma_result, dr_result = await asyncio.gather(
+            glaucoma_pipeline.process(image_bytes, patient_id),
+            dr_pipeline.process(image_bytes, patient_id)
+        )
         
         # Prepare GradCAM data
         # Glaucoma GradCAM returns dict with 'heatmap_only' and 'overlay'
