@@ -180,7 +180,7 @@ const EyeScanAnalysis = () => {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="w-full max-w-full lg:max-w-5xl xl:max-w-6xl mx-auto space-y-6 sm:space-y-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

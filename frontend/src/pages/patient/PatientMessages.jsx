@@ -95,8 +95,8 @@ const PatientMessages = () => {
           </div>
         </div>
 
-        <div className="flex-1 glass-card overflow-hidden flex">
-          <div className="w-80 border-r border-white/5 flex flex-col">
+        <div className="flex-1 glass-card overflow-hidden flex flex-col lg:flex-row">
+          <div className="w-full lg:w-64 xl:w-80 border-r-0 lg:border-r border-white/5 border-b lg:border-b-0 flex flex-col flex-shrink-0">
             <div className="p-4 border-b border-white/5">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-500" />
@@ -149,7 +149,7 @@ const PatientMessages = () => {
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col min-w-0">
             <div className="p-4 border-b border-white/5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="relative">
