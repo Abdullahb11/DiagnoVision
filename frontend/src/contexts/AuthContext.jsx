@@ -24,7 +24,26 @@ export const AuthProvider = ({ children }) => {
   const [userRole, setUserRole] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  // ========== DEMO MODE: Uncomment below to skip Firebase auth (for offline demo) ==========
+  // Uncomment the DEMO_MODE block and comment out the Firebase useEffect below
+  const DEMO_MODE = false  // Change to true for demo mode
+  
+  // DEMO MODE: Mock user for offline demo (uncomment when DEMO_MODE = true)
+  // useEffect(() => {
+  //   setCurrentUser({ uid: 'demo-patient-123', email: 'demo@example.com' })
+  //   setUserRole('patient')
+  //   setLoading(false)
+  // }, [])
+
+  // ========== NORMAL MODE: Firebase auth setup (comment out for demo) ==========
   useEffect(() => {
+    // Skip Firebase if in demo mode
+    if (DEMO_MODE) {
+      setCurrentUser({ uid: 'demo-patient-123', email: 'demo@example.com' })
+      setUserRole('patient')
+      setLoading(false)
+      return
+    }
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user)
       if (user) {

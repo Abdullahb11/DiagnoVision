@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect } from 'react'
 import { 
   LayoutDashboard, History, ScanEye, Users, UserCheck, 
   MessageSquare, X, Activity, Heart, Shield, Bell, Loader2
@@ -9,6 +10,17 @@ import {
 const Sidebar = ({ isOpen, onClose }) => {
   const { userRole, loading, currentUser } = useAuth()
   const location = useLocation()
+  const [isToggleMode, setIsToggleMode] = useState(false)
+  
+  useEffect(() => {
+    const checkWidth = () => {
+      setIsToggleMode(window.innerWidth < 1010)
+    }
+    
+    checkWidth()
+    window.addEventListener('resize', checkWidth)
+    return () => window.removeEventListener('resize', checkWidth)
+  }, [])
 
   const isActive = (path) => location.pathname === path
 
@@ -86,8 +98,8 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   const navItems = userRole === 'patient' ? patientNavItems : userRole === 'doctor' ? doctorNavItems : []
 
-  // On desktop, sidebar should always be visible
-  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1024
+  // On desktop, sidebar should always be visible (above 1010px)
+  const isDesktop = !isToggleMode
   
   const sidebarVariants = {
     open: { x: 0, opacity: 1 },
@@ -176,14 +188,14 @@ const Sidebar = ({ isOpen, onClose }) => {
   return (
     <>
       <AnimatePresence>
-        {isOpen && (
+        {isOpen && isToggleMode && (
           <motion.div
             variants={overlayVariants}
             initial="closed"
             animate="open"
             exit="closed"
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40"
             onClick={onClose}
           />
         )}
@@ -194,7 +206,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         initial={isDesktop ? "open" : "closed"}
         animate={isOpen || isDesktop ? "open" : "closed"}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        className="fixed top-0 left-0 z-50 w-72 h-screen"
+        className="fixed top-0 left-0 z-50 w-72 h-screen lg:z-auto"
       >
         <div className="h-full bg-dark-900/95 backdrop-blur-xl border-r border-white/5 flex flex-col">
           <div className="flex items-center justify-between p-4 pt-20 lg:pt-6 border-b border-white/5">

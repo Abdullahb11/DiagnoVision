@@ -25,8 +25,8 @@ const Layout = ({ children }) => {
   }, [])
 
   useEffect(() => {
-    // Always show sidebar on desktop when user is logged in
-    if (currentUser && window.innerWidth >= 1024) {
+    // Always show sidebar on desktop when user is logged in (above 1010px)
+    if (currentUser && window.innerWidth >= 1010) {
       setSidebarOpen(true)
     }
   }, [currentUser])
@@ -50,7 +50,7 @@ const Layout = ({ children }) => {
           </div>
         )}
 
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 lg:ml-72">
           <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
 
           <motion.main 
@@ -59,13 +59,13 @@ const Layout = ({ children }) => {
             transition={{ duration: 0.4 }}
             className="flex-1 relative"
           >
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+            <div className="w-full max-w-[calc(100%-2rem)] lg:max-w-[calc(100%-4rem)] xl:max-w-[calc(100%-6rem)] 2xl:max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
               {children}
             </div>
           </motion.main>
 
           <footer className="relative border-t border-white/5 bg-dark-900/50 backdrop-blur-xl">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="w-full max-w-[calc(100%-2rem)] lg:max-w-[calc(100%-4rem)] xl:max-w-[calc(100%-6rem)] 2xl:max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6">
               <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-medical-500 flex items-center justify-center">
