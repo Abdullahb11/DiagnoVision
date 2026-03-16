@@ -3,7 +3,7 @@
 ## 🚀 For First Time Setup (After Cloning)
 
 ### Quick Setup (Recommended - Installs Everything)
-
+python 3.12.10
 **Windows:**
 ```bash
 setup.bat

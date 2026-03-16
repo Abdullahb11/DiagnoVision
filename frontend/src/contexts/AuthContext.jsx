@@ -75,7 +75,7 @@ export const AuthProvider = ({ children }) => {
     return unsubscribe
   }, [])
 
-  const signup = async (email, password, displayName, role) => {
+  const signup = async (email, password, displayName, role, licenseNo) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
@@ -107,7 +107,7 @@ export const AuthProvider = ({ children }) => {
             user_id: user.uid,
             name: displayName,
             qualification: '',
-            licenseNo: ''
+            licenseNo: licenseNo || ''
           })
         }
         
