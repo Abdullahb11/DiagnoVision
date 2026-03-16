@@ -1,46 +1,122 @@
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Layout from '../../components/Layout'
 import { 
   Users, Search, Star, MapPin, Clock, 
   MessageSquare, UserPlus, Filter, Award
 } from 'lucide-react'
+import { addDoc, doc, collection, getDocs, getDoc, setDoc, serverTimestamp, query, where } from 'firebase/firestore'
+import { db } from '../../config/firebase'
+import { useAuth } from '../../contexts/AuthContext'
 
 const AvailableDoctors = () => {
-  const doctors = [
-    {
-      id: 1,
-      name: 'Dr. Sarah Johnson',
-      specialty: 'Ophthalmologist',
-      experience: '15 years',
-      rating: 4.9,
-      reviews: 128,
-      location: 'New York, NY',
-      availability: 'Available Today',
-      image: null
-    },
-    {
-      id: 2,
-      name: 'Dr. Michael Chen',
-      specialty: 'Retina Specialist',
-      experience: '12 years',
-      rating: 4.8,
-      reviews: 96,
-      location: 'Los Angeles, CA',
-      availability: 'Available Tomorrow',
-      image: null
-    },
-    {
-      id: 3,
-      name: 'Dr. Emily Williams',
-      specialty: 'Glaucoma Specialist',
-      experience: '10 years',
-      rating: 4.7,
-      reviews: 84,
-      location: 'Chicago, IL',
-      availability: 'Available Today',
-      image: null
-    },
-  ]
+  const { currentUser } = useAuth()
+  const [doctors, setDoctors] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [connectLoadingId, setConnectLoadingId] = useState('')
+  const [excludedDoctorIds, setExcludedDoctorIds] = useState(new Set())
+
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        // Exclude doctors already connected/requested by this patient
+        let exclude = new Set()
+        if (currentUser) {
+          const relQuery = query(
+            collection(db, 'patient_doctor'),
+            where('patientId', '==', currentUser.uid)
+          )
+          const relSnap = await getDocs(relQuery)
+          exclude = new Set(
+            relSnap.docs
+              .map(d => d.data()?.doctorId)
+              .filter(Boolean)
+          )
+          setExcludedDoctorIds(exclude)
+        } else {
+          setExcludedDoctorIds(new Set())
+        }
+
+        const querySnapshot = await getDocs(collection(db, 'doctor'))
+        const fetched = querySnapshot.docs
+          .filter((docSnap) => {
+            const doctorId = docSnap.id
+            return !exclude.has(doctorId)
+          })
+          .map((docSnap) => {
+          const data = docSnap.data()
+          return {
+            id: docSnap.id,
+            name: data.name || 'Unknown Doctor',
+            specialty: data.qualification || 'Eye Specialist',
+            licenseNo: data.licenseNo || 'Not provided',
+            // Placeholder fields until we implement real values
+            rating: data.rating ?? 5.0,
+            reviews: data.reviewsCount ?? 0,
+            experience: data.experience || '—',
+            location: data.location || 'Online',
+            availability: data.availability || 'Available',
+          }
+        })
+        setDoctors(fetched)
+      } catch (err) {
+        console.error('Error fetching doctors:', err)
+        setError('Failed to load doctors. Please try again later.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDoctors()
+  }, [currentUser, excludedDoctorIds])
+
+  const handleConnect = async (doctorId) => {
+    if (!currentUser) {
+      setError('Please sign in to connect with a doctor.')
+      return
+    }
+
+    setError('')
+    setConnectLoadingId(doctorId)
+
+    try {
+      const patientId = currentUser.uid
+      const relationshipId = `${patientId}_${doctorId}`
+
+      // Create/Upsert relationship request (pending until doctor accepts)
+      await setDoc(doc(db, 'patient_doctor', relationshipId), {
+        patientId,
+        doctorId,
+        status: 'requested',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true })
+
+      // Notify doctor about request
+      await addDoc(collection(db, 'notifications'), {
+        user_id: doctorId,
+        type: 'info',
+        title: 'New patient request',
+        message: `${currentUser.displayName || 'A patient'} requested to connect.`,
+        read: false,
+        createdAt: serverTimestamp(),
+        data: {
+          patientId,
+          doctorId,
+          relationshipId
+        }
+      })
+
+      // Immediately hide this doctor from the list
+      setExcludedDoctorIds((prev) => new Set([...prev, doctorId]))
+    } catch (err) {
+      console.error('Connect error:', err)
+      setError('Failed to send request. Please try again.')
+    } finally {
+      setConnectLoadingId('')
+    }
+  }
 
   return (
     <Layout>
@@ -84,8 +160,23 @@ const AvailableDoctors = () => {
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-          {doctors.map((doctor, index) => (
+        {error && (
+          <div className="glass-card p-4 border border-red-500/30 bg-red-500/10 text-red-300 text-sm">
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="glass-card p-6 text-center text-dark-400">
+            Loading doctors...
+          </div>
+        ) : doctors.length === 0 ? (
+          <div className="glass-card p-6 text-center text-dark-400">
+            No doctors available yet. Doctors will appear here once they sign up.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+            {doctors.map((doctor, index) => (
             <motion.div
               key={doctor.id}
               initial={{ opacity: 0, y: 20 }}
@@ -102,6 +193,7 @@ const AvailableDoctors = () => {
                 <div className="flex-1 min-w-0">
                   <h3 className="text-lg font-semibold text-white truncate">{doctor.name}</h3>
                   <p className="text-primary-400 text-sm">{doctor.specialty}</p>
+                  <p className="text-dark-400 text-xs mt-1">License: {doctor.licenseNo}</p>
                   <div className="flex items-center gap-1 mt-1">
                     <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
                     <span className="text-white font-medium">{doctor.rating}</span>
@@ -130,14 +222,19 @@ const AvailableDoctors = () => {
                   <MessageSquare className="w-4 h-4" />
                   Message
                 </button>
-                <button className="flex-1 btn-primary flex items-center justify-center gap-2 py-2">
+                <button
+                  onClick={() => handleConnect(doctor.id)}
+                  disabled={connectLoadingId === doctor.id}
+                  className="flex-1 btn-primary flex items-center justify-center gap-2 py-2"
+                >
                   <UserPlus className="w-4 h-4" />
-                  Connect
+                  {connectLoadingId === doctor.id ? 'Connecting...' : 'Connect'}
                 </button>
               </div>
             </motion.div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </Layout>
   )

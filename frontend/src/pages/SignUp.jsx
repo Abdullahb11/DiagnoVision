@@ -10,6 +10,7 @@ const SignUp = () => {
   const [displayName, setDisplayName] = useState('')
   const [role, setRole] = useState('')
   const [licenseNo, setLicenseNo] = useState('')
+  const [specialty, setSpecialty] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -30,8 +31,13 @@ const SignUp = () => {
       return
     }
 
+    if (role === 'doctor' && !specialty.trim()) {
+      setError('Please enter your specialty')
+      return
+    }
+
     setLoading(true)
-    const result = await signup(email, password, displayName, role, licenseNo)
+    const result = await signup(email, password, displayName, role, licenseNo, specialty)
     
     if (result.success) {
       navigate('/signin')
@@ -195,22 +201,41 @@ const SignUp = () => {
               </div>
 
               {role === 'doctor' && (
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">
-                    License number
-                  </label>
-                  <div className="relative">
-                    <Stethoscope className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" />
-                    <input
-                      type="text"
-                      value={licenseNo}
-                      onChange={(e) => setLicenseNo(e.target.value)}
-                      className="input-field pl-12"
-                      placeholder="Enter your medical license number"
-                      required
-                    />
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-dark-300 mb-2">
+                      License number
+                    </label>
+                    <div className="relative">
+                      <Stethoscope className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" />
+                      <input
+                        type="text"
+                        value={licenseNo}
+                        onChange={(e) => setLicenseNo(e.target.value)}
+                        className="input-field pl-12"
+                        placeholder="Enter your medical license number"
+                        required
+                      />
+                    </div>
                   </div>
-                </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-dark-300 mb-2">
+                      Specialty
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" />
+                      <input
+                        type="text"
+                        value={specialty}
+                        onChange={(e) => setSpecialty(e.target.value)}
+                        className="input-field pl-12"
+                        placeholder="e.g. Retina Specialist, Glaucoma Specialist"
+                        required
+                      />
+                    </div>
+                  </div>
+                </>
               )}
 
               <div>
