@@ -1,42 +1,50 @@
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Layout from '../../components/Layout'
 import { Bell, CheckCircle, AlertCircle, Info, Clock, X } from 'lucide-react'
+import { collection, getDocs, query, where } from 'firebase/firestore'
+import { db } from '../../config/firebase'
+import { useAuth } from '../../contexts/AuthContext'
 
 const PatientNotifications = () => {
-  const notifications = [
-    {
-      id: 1,
-      type: 'success',
-      title: 'Scan Analysis Complete',
-      message: 'Your retinal scan from Dec 1, 2025 has been analyzed. Results show normal findings.',
-      time: '2 hours ago',
-      read: false
-    },
-    {
-      id: 2,
-      type: 'info',
-      title: 'Doctor Response',
-      message: 'Dr. Sarah Johnson has reviewed your scan and provided feedback.',
-      time: '5 hours ago',
-      read: false
-    },
-    {
-      id: 3,
-      type: 'warning',
-      title: 'Appointment Reminder',
-      message: 'You have an upcoming appointment with Dr. Michael Chen on Dec 15, 2025.',
-      time: '1 day ago',
-      read: true
-    },
-    {
-      id: 4,
-      type: 'success',
-      title: 'New Doctor Connected',
-      message: 'Dr. Emily Williams has been added to your care team.',
-      time: '2 days ago',
-      read: true
-    },
-  ]
+  const { currentUser } = useAuth()
+  const [notifications, setNotifications] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (!currentUser) return
+      try {
+        setLoading(true)
+        setError('')
+        const notifQuery = query(
+          collection(db, 'notifications'),
+          where('user_id', '==', currentUser.uid)
+        )
+        const snap = await getDocs(notifQuery)
+        const rows = snap.docs.map((d) => {
+          const data = d.data()
+          return {
+            id: d.id,
+            type: data.type || 'info',
+            title: data.title || 'Notification',
+            message: data.message || '',
+            read: !!data.read,
+            createdAt: data.createdAt || null
+          }
+        })
+        setNotifications(rows)
+      } catch (err) {
+        console.error('Error fetching patient notifications:', err)
+        setError('Failed to load notifications.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchNotifications()
+  }, [currentUser])
 
   const getIcon = (type) => {
     switch (type) {
@@ -79,8 +87,17 @@ const PatientNotifications = () => {
           </div>
         </motion.div>
 
-        <div className="space-y-4">
-          {notifications.map((notification, index) => {
+        {error && (
+          <div className="glass-card p-4 border border-red-500/30 bg-red-500/10 text-red-300 text-sm">
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="glass-card p-6 text-center text-dark-400">Loading...</div>
+        ) : (
+          <div className="space-y-4">
+            {notifications.map((notification, index) => {
             const Icon = getIcon(notification.type)
             return (
               <motion.div
@@ -110,16 +127,17 @@ const PatientNotifications = () => {
                     </div>
                     <div className="flex items-center gap-2 text-xs text-dark-500">
                       <Clock className="w-3 h-3" />
-                      {notification.time}
+                      {notification.createdAt?.toDate ? notification.createdAt.toDate().toLocaleString() : '—'}
                     </div>
                   </div>
                 </div>
               </motion.div>
             )
-          })}
-        </div>
+            })}
+          </div>
+        )}
 
-        {notifications.length === 0 && (
+        {!loading && notifications.length === 0 && (
           <div className="glass-card p-12 text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-dark-800/50 flex items-center justify-center">
               <Bell className="w-8 h-8 text-dark-500" />

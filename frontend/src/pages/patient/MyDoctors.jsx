@@ -1,34 +1,62 @@
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Layout from '../../components/Layout'
 import { 
   UserCheck, MessageSquare, Calendar, Star, 
   ChevronRight
 } from 'lucide-react'
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore'
+import { db } from '../../config/firebase'
+import { useAuth } from '../../contexts/AuthContext'
 
 const MyDoctors = () => {
-  const myDoctors = [
-    {
-      id: 1,
-      name: 'Dr. Sarah Johnson',
-      specialty: 'Ophthalmologist',
-      rating: 4.9,
-      status: 'active'
-    },
-    {
-      id: 2,
-      name: 'Dr. Michael Chen',
-      specialty: 'Retina Specialist',
-      rating: 4.8,
-      status: 'active'
-    },
-    {
-      id: 3,
-      name: 'Dr. Emily Williams',
-      specialty: 'Glaucoma Specialist',
-      rating: 4.7,
-      status: 'active'
-    },
-  ]
+  const { currentUser } = useAuth()
+  const [myDoctors, setMyDoctors] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const fetchMyDoctors = async () => {
+      if (!currentUser) return
+
+      try {
+        setLoading(true)
+        setError('')
+
+        const relQuery = query(
+          collection(db, 'patient_doctor'),
+          where('patientId', '==', currentUser.uid),
+          where('status', '==', 'active')
+        )
+        const relSnap = await getDocs(relQuery)
+        const doctorIds = Array.from(new Set(relSnap.docs.map(d => d.data().doctorId).filter(Boolean)))
+
+        const doctorDocs = await Promise.all(
+          doctorIds.map(async (doctorId) => {
+            const doctorSnap = await getDoc(doc(db, 'doctor', doctorId))
+            if (!doctorSnap.exists()) return null
+            const data = doctorSnap.data()
+            return {
+              id: doctorId,
+              name: data.name || 'Unknown Doctor',
+              specialty: data.qualification || 'Eye Specialist',
+              rating: data.rating ?? 5.0,
+              status: 'active',
+            }
+          })
+        )
+
+        setMyDoctors(doctorDocs.filter(Boolean))
+      } catch (err) {
+        console.error('Error fetching my doctors:', err)
+        setError('Failed to load your doctors.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchMyDoctors()
+  }, [currentUser])
 
   return (
     <Layout>
@@ -49,8 +77,19 @@ const MyDoctors = () => {
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          {myDoctors.map((doctor, index) => (
+        {error && (
+          <div className="glass-card p-4 border border-red-500/30 bg-red-500/10 text-red-300 text-sm">
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="glass-card p-6 text-center text-dark-400">
+            Loading your doctors...
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            {myDoctors.map((doctor, index) => (
             <motion.div
               key={doctor.id}
               initial={{ opacity: 0, y: 20 }}
@@ -88,8 +127,9 @@ const MyDoctors = () => {
                 </button>
               </div>
             </motion.div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {myDoctors.length === 0 && (
           <div className="glass-card p-12 text-center">

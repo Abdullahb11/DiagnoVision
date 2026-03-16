@@ -5,19 +5,46 @@ import {
   Users, Search, Star, MapPin, Clock, 
   MessageSquare, UserPlus, Filter, Award
 } from 'lucide-react'
-import { collection, getDocs } from 'firebase/firestore'
+import { addDoc, doc, collection, getDocs, getDoc, setDoc, serverTimestamp, query, where } from 'firebase/firestore'
 import { db } from '../../config/firebase'
+import { useAuth } from '../../contexts/AuthContext'
 
 const AvailableDoctors = () => {
+  const { currentUser } = useAuth()
   const [doctors, setDoctors] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [connectLoadingId, setConnectLoadingId] = useState('')
+  const [excludedDoctorIds, setExcludedDoctorIds] = useState(new Set())
 
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
+        // Exclude doctors already connected/requested by this patient
+        let exclude = new Set()
+        if (currentUser) {
+          const relQuery = query(
+            collection(db, 'patient_doctor'),
+            where('patientId', '==', currentUser.uid)
+          )
+          const relSnap = await getDocs(relQuery)
+          exclude = new Set(
+            relSnap.docs
+              .map(d => d.data()?.doctorId)
+              .filter(Boolean)
+          )
+          setExcludedDoctorIds(exclude)
+        } else {
+          setExcludedDoctorIds(new Set())
+        }
+
         const querySnapshot = await getDocs(collection(db, 'doctor'))
-        const fetched = querySnapshot.docs.map((docSnap) => {
+        const fetched = querySnapshot.docs
+          .filter((docSnap) => {
+            const doctorId = docSnap.id
+            return !exclude.has(doctorId)
+          })
+          .map((docSnap) => {
           const data = docSnap.data()
           return {
             id: docSnap.id,
@@ -42,7 +69,54 @@ const AvailableDoctors = () => {
     }
 
     fetchDoctors()
-  }, [])
+  }, [currentUser, excludedDoctorIds])
+
+  const handleConnect = async (doctorId) => {
+    if (!currentUser) {
+      setError('Please sign in to connect with a doctor.')
+      return
+    }
+
+    setError('')
+    setConnectLoadingId(doctorId)
+
+    try {
+      const patientId = currentUser.uid
+      const relationshipId = `${patientId}_${doctorId}`
+
+      // Create/Upsert relationship request (pending until doctor accepts)
+      await setDoc(doc(db, 'patient_doctor', relationshipId), {
+        patientId,
+        doctorId,
+        status: 'requested',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true })
+
+      // Notify doctor about request
+      await addDoc(collection(db, 'notifications'), {
+        user_id: doctorId,
+        type: 'info',
+        title: 'New patient request',
+        message: `${currentUser.displayName || 'A patient'} requested to connect.`,
+        read: false,
+        createdAt: serverTimestamp(),
+        data: {
+          patientId,
+          doctorId,
+          relationshipId
+        }
+      })
+
+      // Immediately hide this doctor from the list
+      setExcludedDoctorIds((prev) => new Set([...prev, doctorId]))
+    } catch (err) {
+      console.error('Connect error:', err)
+      setError('Failed to send request. Please try again.')
+    } finally {
+      setConnectLoadingId('')
+    }
+  }
 
   return (
     <Layout>
@@ -148,9 +222,13 @@ const AvailableDoctors = () => {
                   <MessageSquare className="w-4 h-4" />
                   Message
                 </button>
-                <button className="flex-1 btn-primary flex items-center justify-center gap-2 py-2">
+                <button
+                  onClick={() => handleConnect(doctor.id)}
+                  disabled={connectLoadingId === doctor.id}
+                  className="flex-1 btn-primary flex items-center justify-center gap-2 py-2"
+                >
                   <UserPlus className="w-4 h-4" />
-                  Connect
+                  {connectLoadingId === doctor.id ? 'Connecting...' : 'Connect'}
                 </button>
               </div>
             </motion.div>

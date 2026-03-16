@@ -1,57 +1,66 @@
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Layout from '../../components/Layout'
+import { useAuth } from '../../contexts/AuthContext'
 import { 
   Users, Search, Eye, Calendar, MessageSquare,
   Filter, ChevronRight, Activity, FileText, Clock
 } from 'lucide-react'
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore'
+import { db } from '../../config/firebase'
 
 const DoctorPatients = () => {
-  const patients = [
-    {
-      id: 1,
-      name: 'John Smith',
-      age: 45,
-      lastScan: 'Dec 1, 2025',
-      condition: 'Mild NPDR',
-      riskLevel: 'Medium',
-      riskColor: 'badge-warning',
-      totalScans: 5,
-      status: 'Needs Review'
-    },
-    {
-      id: 2,
-      name: 'Sarah Johnson',
-      age: 52,
-      lastScan: 'Nov 28, 2025',
-      condition: 'Normal',
-      riskLevel: 'Low',
-      riskColor: 'badge-success',
-      totalScans: 3,
-      status: 'Reviewed'
-    },
-    {
-      id: 3,
-      name: 'Michael Brown',
-      age: 61,
-      lastScan: 'Nov 25, 2025',
-      condition: 'Moderate Glaucoma',
-      riskLevel: 'High',
-      riskColor: 'badge-danger',
-      totalScans: 8,
-      status: 'Needs Review'
-    },
-    {
-      id: 4,
-      name: 'Emily Davis',
-      age: 38,
-      lastScan: 'Nov 20, 2025',
-      condition: 'Normal',
-      riskLevel: 'Low',
-      riskColor: 'badge-success',
-      totalScans: 2,
-      status: 'Reviewed'
-    },
-  ]
+  const { currentUser } = useAuth()
+  const [patients, setPatients] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const fetchPatients = async () => {
+      if (!currentUser) return
+
+      try {
+        setLoading(true)
+        setError('')
+
+        const relQuery = query(
+          collection(db, 'patient_doctor'),
+          where('doctorId', '==', currentUser.uid),
+          where('status', '==', 'active')
+        )
+        const relSnap = await getDocs(relQuery)
+        const patientIds = Array.from(new Set(relSnap.docs.map(d => d.data().patientId).filter(Boolean)))
+
+        const patientDocs = await Promise.all(
+          patientIds.map(async (patientId) => {
+            const patientSnap = await getDoc(doc(db, 'patient', patientId))
+            if (!patientSnap.exists()) return null
+            const data = patientSnap.data()
+            return {
+              id: patientId,
+              name: data.name || 'Unknown Patient',
+              age: data.age || '—',
+              lastScan: data.lastScan || '—',
+              condition: data.condition || '—',
+              riskLevel: data.riskLevel || '—',
+              riskColor: data.riskColor || 'badge-success',
+              totalScans: data.totalScans || 0,
+              status: data.status || '—'
+            }
+          })
+        )
+
+        setPatients(patientDocs.filter(Boolean))
+      } catch (err) {
+        console.error('Error fetching patients:', err)
+        setError('Failed to load patients.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPatients()
+  }, [currentUser])
 
   return (
     <Layout>
@@ -104,6 +113,16 @@ const DoctorPatients = () => {
         >
           <div className="glass-card overflow-hidden">
             <div className="overflow-x-auto">
+              {error && (
+                <div className="p-4 text-sm text-red-300 bg-red-500/10 border-b border-red-500/20">
+                  {error}
+                </div>
+              )}
+              {loading && (
+                <div className="p-4 text-sm text-dark-400 bg-dark-800/30 border-b border-white/5">
+                  Loading patients...
+                </div>
+              )}
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-white/5">
@@ -116,7 +135,14 @@ const DoctorPatients = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {patients.map((patient, index) => (
+                  {!loading && patients.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-6 text-center text-dark-400">
+                        No patients connected yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    patients.map((patient, index) => (
                     <motion.tr
                       key={patient.id}
                       initial={{ opacity: 0, y: 10 }}
@@ -169,7 +195,8 @@ const DoctorPatients = () => {
                         </div>
                       </td>
                     </motion.tr>
-                  ))}
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

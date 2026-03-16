@@ -13,14 +13,22 @@
 - `name` - Patient name
 - `age` - Patient age
 - `gender` - Patient gender
-- `doctorId` - Foreign key to doctor.user_id
+- `doctorId` - Primary doctor UID (foreign key to doctor.user_id). Set on first connect.
 - `contactNo` - Contact number
 
 ### doctor
 - `user_id` - Foreign key to user.id
 - `name` - Doctor name
-- `qualification` - Doctor qualifications
+- `qualification` - Doctor qualification / specialty
 - `licenseNo` - Medical license number
+
+### patient_doctor
+- `id` - Relationship ID (recommended: `${patientId}_${doctorId}`)
+- `patientId` - Foreign key to patient.user_id
+- `doctorId` - Foreign key to doctor.user_id
+- `status` - Relationship status (e.g. active/past/requested)
+- `createdAt` - Timestamp
+- `updatedAt` - Timestamp
 
 ### messages
 - `msg_id` - Message ID (primary key)
