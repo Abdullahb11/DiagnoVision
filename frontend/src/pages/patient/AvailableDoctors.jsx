@@ -1,46 +1,48 @@
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Layout from '../../components/Layout'
 import { 
   Users, Search, Star, MapPin, Clock, 
   MessageSquare, UserPlus, Filter, Award
 } from 'lucide-react'
+import { collection, getDocs } from 'firebase/firestore'
+import { db } from '../../config/firebase'
 
 const AvailableDoctors = () => {
-  const doctors = [
-    {
-      id: 1,
-      name: 'Dr. Sarah Johnson',
-      specialty: 'Ophthalmologist',
-      experience: '15 years',
-      rating: 4.9,
-      reviews: 128,
-      location: 'New York, NY',
-      availability: 'Available Today',
-      image: null
-    },
-    {
-      id: 2,
-      name: 'Dr. Michael Chen',
-      specialty: 'Retina Specialist',
-      experience: '12 years',
-      rating: 4.8,
-      reviews: 96,
-      location: 'Los Angeles, CA',
-      availability: 'Available Tomorrow',
-      image: null
-    },
-    {
-      id: 3,
-      name: 'Dr. Emily Williams',
-      specialty: 'Glaucoma Specialist',
-      experience: '10 years',
-      rating: 4.7,
-      reviews: 84,
-      location: 'Chicago, IL',
-      availability: 'Available Today',
-      image: null
-    },
-  ]
+  const [doctors, setDoctors] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'doctor'))
+        const fetched = querySnapshot.docs.map((docSnap) => {
+          const data = docSnap.data()
+          return {
+            id: docSnap.id,
+            name: data.name || 'Unknown Doctor',
+            specialty: data.qualification || 'Eye Specialist',
+            licenseNo: data.licenseNo || 'Not provided',
+            // Placeholder fields until we implement real values
+            rating: data.rating ?? 5.0,
+            reviews: data.reviewsCount ?? 0,
+            experience: data.experience || '—',
+            location: data.location || 'Online',
+            availability: data.availability || 'Available',
+          }
+        })
+        setDoctors(fetched)
+      } catch (err) {
+        console.error('Error fetching doctors:', err)
+        setError('Failed to load doctors. Please try again later.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDoctors()
+  }, [])
 
   return (
     <Layout>
@@ -84,8 +86,23 @@ const AvailableDoctors = () => {
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-          {doctors.map((doctor, index) => (
+        {error && (
+          <div className="glass-card p-4 border border-red-500/30 bg-red-500/10 text-red-300 text-sm">
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="glass-card p-6 text-center text-dark-400">
+            Loading doctors...
+          </div>
+        ) : doctors.length === 0 ? (
+          <div className="glass-card p-6 text-center text-dark-400">
+            No doctors available yet. Doctors will appear here once they sign up.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+            {doctors.map((doctor, index) => (
             <motion.div
               key={doctor.id}
               initial={{ opacity: 0, y: 20 }}
@@ -102,6 +119,7 @@ const AvailableDoctors = () => {
                 <div className="flex-1 min-w-0">
                   <h3 className="text-lg font-semibold text-white truncate">{doctor.name}</h3>
                   <p className="text-primary-400 text-sm">{doctor.specialty}</p>
+                  <p className="text-dark-400 text-xs mt-1">License: {doctor.licenseNo}</p>
                   <div className="flex items-center gap-1 mt-1">
                     <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
                     <span className="text-white font-medium">{doctor.rating}</span>
@@ -136,8 +154,9 @@ const AvailableDoctors = () => {
                 </button>
               </div>
             </motion.div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </Layout>
   )
