@@ -147,8 +147,7 @@ const EyeScanAnalysis = () => {
       if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
         errorMessage = `Cannot connect to backend server. Please ensure:
         1. Backend server is running on http://localhost:8000
-        2. Check your network connection
-        3. Verify CORS settings in backend`
+        2. Verify CORS settings in backend`
       } else if (err.message.includes('Cannot connect')) {
         errorMessage = err.message
       }
@@ -159,17 +158,41 @@ const EyeScanAnalysis = () => {
     }
   }
 
-  const getConfidenceColor = (confidence) => {
-    if (confidence >= 0.7) return 'text-red-400'
-    if (confidence >= 0.5) return 'text-yellow-400'
-    return 'text-accent-400'
-  }
-
-  const getConfidenceBg = (confidence) => {
-    if (confidence >= 0.7) return 'from-red-500/10 to-red-500/5 border-red-500/20'
-    if (confidence >= 0.5) return 'from-yellow-500/10 to-yellow-500/5 border-yellow-500/20'
-    return 'from-accent-500/10 to-accent-500/5 border-accent-500/20'
-  }
+  const getConfidenceColor = (confidence, resultMsg = '') => {
+    const isNegativeResult = resultMsg.toLowerCase().includes('no');
+  
+    if (isNegativeResult) {
+      if (confidence >= 0.7) return 'text-green-400'; // High confidence of NO disease
+      return 'text-yellow-400'; // Low confidence of NO disease
+    }
+  
+    // Original logic for when disease IS detected
+    if (confidence >= 0.7) return 'text-red-400';
+    if (confidence >= 0.5) return 'text-yellow-400';
+    return 'text-accent-400';
+  };
+  
+  const getConfidenceBg = (confidence, resultMsg = '') => {
+    const isNegativeResult = resultMsg.toLowerCase().includes('no');
+  
+    if (isNegativeResult) {
+      if (confidence >= 0.7) return 'from-green-500/10 to-green-500/5 border-green-500/20';
+      return 'from-yellow-500/10 to-yellow-500/5 border-yellow-500/20';
+    }
+  
+    if (confidence >= 0.7) return 'from-red-500/10 to-red-500/5 border-red-500/20';
+    if (confidence >= 0.5) return 'from-yellow-500/10 to-yellow-500/5 border-yellow-500/20';
+    return 'from-accent-500/10 to-accent-500/5 border-accent-500/20';
+  };
+  
+  // Update for the progress bar color specifically
+  const getBarColor = (confidence, resultMsg = '') => {
+    const isNegativeResult = resultMsg.toLowerCase().includes('no');
+    if (isNegativeResult) {
+      return confidence >= 0.7 ? 'bg-green-500' : 'bg-yellow-500';
+    }
+    return confidence >= 0.7 ? 'bg-red-500' : confidence >= 0.5 ? 'bg-yellow-500' : 'bg-accent-500';
+  };
 
   const clearSelection = () => {
     setSelectedFile(null)
@@ -335,81 +358,68 @@ const EyeScanAnalysis = () => {
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-6">
-                  {analysisResults.glaucoma && (
-                    <div className={`p-6 rounded-2xl bg-gradient-to-br border ${getConfidenceBg(analysisResults.glaucoma.confidence)}`}>
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 rounded-xl bg-dark-800/50">
-                          <Shield className="w-5 h-5 text-primary-400" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-white">Glaucoma Detection</h3>
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <div>
-                          <p className="text-sm text-dark-400 mb-1">Result</p>
-                          <p className={`text-lg font-medium ${getConfidenceColor(analysisResults.glaucoma.confidence)}`}>
-                            {analysisResults.glaucoma.result_msg}
-                          </p>
-                        </div>
-                        
-                        <div>
-                          <p className="text-sm text-dark-400 mb-2">Confidence</p>
-                          <div className="flex items-center gap-3">
-                            <div className="flex-1 h-3 bg-dark-800 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full transition-all duration-500 ${
-                                  analysisResults.glaucoma.confidence >= 0.7 ? 'bg-red-500' :
-                                  analysisResults.glaucoma.confidence >= 0.5 ? 'bg-yellow-500' : 'bg-accent-500'
-                                }`}
-                                style={{ width: `${analysisResults.glaucoma.confidence * 100}%` }}
-                              />
-                            </div>
-                            <span className={`font-semibold ${getConfidenceColor(analysisResults.glaucoma.confidence)}`}>
-                              {(analysisResults.glaucoma.confidence * 100).toFixed(1)}%
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                {analysisResults.glaucoma && (
+  <div className={`p-6 rounded-2xl bg-gradient-to-br border ${getConfidenceBg(analysisResults.glaucoma.confidence, analysisResults.glaucoma.result_msg)}`}>
+    {/* ... Title section ... */}
+    <div className="space-y-4">
+      <div>
+        <p className="text-sm text-dark-400 mb-1">Result</p>
+        <p className={`text-lg font-medium ${getConfidenceColor(analysisResults.glaucoma.confidence, analysisResults.glaucoma.result_msg)}`}>
+          {analysisResults.glaucoma.result_msg}
+        </p>
+      </div>
+      <div>
+        <p className="text-sm text-dark-400 mb-2">Confidence</p>
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-3 bg-dark-800 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${getBarColor(analysisResults.glaucoma.confidence, analysisResults.glaucoma.result_msg)}`}
+              style={{ width: `${analysisResults.glaucoma.confidence * 100}%` }}
+            />
+          </div>
+          <span className={`font-semibold ${getConfidenceColor(analysisResults.glaucoma.confidence, analysisResults.glaucoma.result_msg)}`}>
+            {(analysisResults.glaucoma.confidence * 100).toFixed(1)}%
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
-                  {analysisResults.dr && (
-                    <div className={`p-6 rounded-2xl bg-gradient-to-br border ${getConfidenceBg(analysisResults.dr.confidence)}`}>
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 rounded-xl bg-dark-800/50">
-                          <Activity className="w-5 h-5 text-medical-400" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-white">Diabetic Retinopathy</h3>
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <div>
-                          <p className="text-sm text-dark-400 mb-1">Result</p>
-                          <p className={`text-lg font-medium ${getConfidenceColor(analysisResults.dr.confidence)}`}>
-                            {analysisResults.dr.result_msg}
-                          </p>
-                        </div>
-                        
-                        <div>
-                          <p className="text-sm text-dark-400 mb-2">Confidence</p>
-                          <div className="flex items-center gap-3">
-                            <div className="flex-1 h-3 bg-dark-800 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full transition-all duration-500 ${
-                                  analysisResults.dr.confidence >= 0.7 ? 'bg-red-500' :
-                                  analysisResults.dr.confidence >= 0.5 ? 'bg-yellow-500' : 'bg-accent-500'
-                                }`}
-                                style={{ width: `${analysisResults.dr.confidence * 100}%` }}
-                              />
-                            </div>
-                            <span className={`font-semibold ${getConfidenceColor(analysisResults.dr.confidence)}`}>
-                              {(analysisResults.dr.confidence * 100).toFixed(1)}%
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+{analysisResults.dr && (
+  <div className={`p-6 rounded-2xl bg-gradient-to-br border ${getConfidenceBg(analysisResults.dr.confidence, analysisResults.dr.result_msg)}`}>
+    <div className="flex items-center gap-3 mb-4">
+      <div className="p-2 rounded-xl bg-dark-800/50">
+        <Activity className="w-5 h-5 text-medical-400" />
+      </div>
+      <h3 className="text-lg font-semibold text-white">Diabetic Retinopathy</h3>
+    </div>
+    
+    <div className="space-y-4">
+      <div>
+        <p className="text-sm text-dark-400 mb-1">Result</p>
+        <p className={`text-lg font-medium ${getConfidenceColor(analysisResults.dr.confidence, analysisResults.dr.result_msg)}`}>
+          {analysisResults.dr.result_msg}
+        </p>
+      </div>
+      
+      <div>
+        <p className="text-sm text-dark-400 mb-2">Confidence</p>
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-3 bg-dark-800 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${getBarColor(analysisResults.dr.confidence, analysisResults.dr.result_msg)}`}
+              style={{ width: `${analysisResults.dr.confidence * 100}%` }}
+            />
+          </div>
+          <span className={`font-semibold ${getConfidenceColor(analysisResults.dr.confidence, analysisResults.dr.result_msg)}`}>
+            {(analysisResults.dr.confidence * 100).toFixed(1)}%
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
                 </div>
               </div>
 
