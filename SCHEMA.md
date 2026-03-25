@@ -31,11 +31,12 @@
 - `updatedAt` - Timestamp
 
 ### messages
-- `msg_id` - Message ID (primary key)
+- `msg_id` - Message document ID (auto-generated)
 - `patientId` - Foreign key to patient.user_id
 - `doctorId` - Foreign key to doctor.user_id
 - `msg` - Message content
 - `sent_by_patient` - Boolean flag indicating if message was sent by patient
+- `createdAt` - Server timestamp for ordering (required for queries)
 
 ### notifications
 - `user_id` - Foreign key to user.id

@@ -50,7 +50,8 @@ const Layout = ({ children }) => {
           </div>
         )}
 
-        <div className="flex-1 flex flex-col min-w-0 lg:ml-72">
+        {/* Must match Sidebar desktop breakpoint (1010px), not lg (1024px), or main sits under fixed sidebar */}
+        <div className="flex-1 flex flex-col min-w-0 min-[1010px]:ml-72">
           <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
 
           <motion.main 
