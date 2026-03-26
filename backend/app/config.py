@@ -29,6 +29,14 @@ class Settings:
     FIREBASE_SERVICE_ACCOUNT_KEY_PATH = _resolve_firebase_key_path()
     # Supabase Storage bucket for scan PDF reports (default: same bucket as retinal images)
     SUPABASE_SCAN_REPORTS_BUCKET = os.getenv("SUPABASE_SCAN_REPORTS_BUCKET", "images")
+
+    # Gemini Configuration (used for doctor-focused report explanation in PDF)
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("Gemini_API_KEY")
+    GEMINI_MODEL = (
+        os.getenv("GEMINI_MODEL")
+        or os.getenv("GEMINI_MODEL_NAME")
+        or "gemini-2.5-flash"
+    )
     
     # API Configuration
     API_PORT = int(os.getenv("API_PORT", 8000))

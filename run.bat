@@ -55,6 +55,9 @@ if not exist venv (
     )
 )
 
+REM Kill stale process(es) already bound to backend port 8000
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$pids = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique; foreach ($pid in $pids) { Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue }" >nul 2>nul
+
 REM Start backend in a new window
 echo.
 echo Starting Backend Server...

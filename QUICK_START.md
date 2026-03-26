@@ -3,7 +3,11 @@
 ## 🚀 For First Time Setup (After Cloning)
 
 ### Quick Setup (Recommended - Installs Everything)
+
+taskkill /IM python.exe /F
+taskkill /IM python3.12.exe /F
 python 3.12.10
+node 22.12.0
 **Windows:**
 ```bash
 setup.bat
