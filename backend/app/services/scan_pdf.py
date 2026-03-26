@@ -2,6 +2,8 @@
 import base64
 import io
 import logging
+from pathlib import Path
+import re
 from typing import Optional
 
 from PIL import Image
@@ -10,6 +12,8 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import Image as RLImage, Paragraph, SimpleDocTemplate, Spacer
+
+from app.services.gemini_service import gemini_service
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +53,18 @@ def _image_flowable(raw: bytes, max_width: float = 5.25 * inch):
     except Exception as e:
         logger.warning("Failed to build PDF image: %s", e)
         return None
+
+
+def _summary_line(label: str, msg: str, confidence_text: str) -> str:
+    # Normalize message so confidence appears once in a consistent format.
+    safe_msg = (msg or "").strip()
+    safe_msg = re.sub(
+        r"\s*\(confidence:\s*[^)]*\)\s*$",
+        "",
+        safe_msg,
+        flags=re.IGNORECASE,
+    ).strip()
+    return f"<b>{label}:</b> {safe_msg} (confidence: {confidence_text})"
 
 
 def build_scan_report_pdf(
@@ -101,8 +117,52 @@ def build_scan_report_pdf(
     story.append(Paragraph("Summary", h2))
     gc = f"{glaucoma_confidence:.1%}" if glaucoma_confidence is not None else "N/A"
     dc = f"{dr_confidence:.1%}" if dr_confidence is not None else "N/A"
-    story.append(Paragraph(f"<b>Glaucoma:</b> {glaucoma_msg} (confidence: {gc})", body))
-    story.append(Paragraph(f"<b>Diabetic retinopathy:</b> {dr_msg} (confidence: {dc})", body))
+    story.append(Paragraph(_summary_line("Glaucoma", glaucoma_msg, gc), body))
+    story.append(Paragraph(_summary_line("Diabetic retinopathy", dr_msg, dc), body))
+    story.append(Spacer(1, 0.15 * inch))
+
+    story.append(Paragraph("AI clinical commentary (doctor-facing)", h2))
+    ai_data = gemini_service.build_doctor_explanation(
+        glaucoma_msg=glaucoma_msg,
+        dr_msg=dr_msg,
+        glaucoma_confidence=glaucoma_confidence,
+        dr_confidence=dr_confidence,
+    )
+    if ai_data:
+        summary = str(ai_data.get("clinical_summary", "")).strip()
+        actions = ai_data.get("action_points") or []
+        disclaimer = str(ai_data.get("disclaimer", "")).strip()
+        if summary:
+            story.append(Paragraph(summary, body))
+            story.append(Spacer(1, 0.06 * inch))
+        if isinstance(actions, list) and actions:
+            for item in actions[:4]:
+                line = str(item).strip()
+                if line:
+                    story.append(Paragraph(f"• {line}", body))
+            story.append(Spacer(1, 0.06 * inch))
+        if disclaimer:
+            story.append(Paragraph(f"<i>{disclaimer}</i>", body))
+        else:
+            story.append(
+                Paragraph(
+                    "<i>AI-generated support text for clinician review only; not a diagnosis.</i>",
+                    body,
+                )
+            )
+    else:
+        story.append(
+            Paragraph(
+                "AI clinical commentary is unavailable for this report.",
+                body,
+            )
+        )
+        story.append(
+            Paragraph(
+                "<i>AI-generated support text is optional and does not replace physician judgment.</i>",
+                body,
+            )
+        )
     story.append(Spacer(1, 0.15 * inch))
 
     sections = [
@@ -134,6 +194,19 @@ def build_scan_report_pdf(
             body,
         )
     )
+    logo_path = Path(__file__).parent / "assets" / "logo.jpg"
+    if logo_path.exists():
+        try:
+            story.append(Spacer(1, 0.08 * inch))
+            with Image.open(str(logo_path)) as raw_logo:
+                ratio = (raw_logo.height / raw_logo.width) if raw_logo.width else 1.0
+            logo_w = 1.0 * inch
+            logo_h = logo_w * ratio
+            logo = RLImage(str(logo_path), width=logo_w, height=logo_h)
+            logo.hAlign = "LEFT"
+            story.append(logo)
+        except Exception as e:
+            logger.warning("Failed to embed footer logo: %s", e)
 
     doc.build(story)
     buffer.seek(0)
