@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Layout from '../../components/Layout'
-import { Bell, CheckCircle, AlertCircle, Info, Clock, Users } from 'lucide-react'
+import { Bell, CheckCircle, AlertCircle, Info, Clock, Users, ExternalLink, Download } from 'lucide-react'
 import { collection, getDocs, query, where, doc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../config/firebase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -55,14 +55,22 @@ const DoctorNotifications = () => {
         const notifSnap = await getDocs(notifQuery)
         const notifRows = notifSnap.docs.map((d) => {
           const data = d.data()
+          const extra = data.data && typeof data.data === 'object' ? data.data : {}
           return {
             id: d.id,
             type: data.type || 'info',
             title: data.title || 'Notification',
             message: data.message || '',
             read: !!data.read,
-            createdAt: data.createdAt || null
+            createdAt: data.createdAt || null,
+            pdfUrl: extra.pdf_url || data.pdf_url || null,
+            data: extra,
           }
+        })
+        notifRows.sort((a, b) => {
+          const ta = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0
+          const tb = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0
+          return tb - ta
         })
         setNotifications(notifRows)
       } catch (err) {
@@ -246,6 +254,27 @@ const DoctorNotifications = () => {
                       <Clock className="w-3 h-3" />
                       {notification.createdAt?.toDate ? notification.createdAt.toDate().toLocaleString() : '—'}
                     </div>
+                    {notification.pdfUrl && (
+                      <div className="flex flex-wrap gap-2 mt-4">
+                        <a
+                          href={notification.pdfUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-secondary inline-flex items-center gap-2 text-sm py-2 px-4"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          View PDF
+                        </a>
+                        <a
+                          href={notification.pdfUrl}
+                          download={`scan-report-${notification.data?.image_id || notification.id}.pdf`}
+                          className="btn-primary inline-flex items-center gap-2 text-sm py-2 px-4"
+                        >
+                          <Download className="w-4 h-4" />
+                          Download
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </div>
               </motion.div>

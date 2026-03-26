@@ -15,7 +15,7 @@ const PatientHistory = () => {
   const [scanHistory, setScanHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const [expandedScan, setExpandedScan] = useState(null)
-  const [imageData, setImageData] = useState({}) // Cache for image URLs
+  const [imageData, setImageData] = useState({}) 
   const [imageLoading, setImageLoading] = useState({})
 
   useEffect(() => {
@@ -30,7 +30,6 @@ const PatientHistory = () => {
     try {
       setLoading(true)
       
-      // Fetch both Glaucoma and DR results
       const glaucomaQuery = query(
         collection(db, 'glucoma_result'),
         where('patientId', '==', currentUser.uid)
@@ -45,10 +44,8 @@ const PatientHistory = () => {
         getDocs(drQuery)
       ])
 
-      // Create a map to combine results by imageId
       const scansMap = new Map()
 
-      // Process Glaucoma results
       glaucomaSnapshot.docs.forEach((doc) => {
         const data = doc.data()
         const imageId = data.imageId
@@ -66,23 +63,19 @@ const PatientHistory = () => {
         })
       })
 
-      // Process DR results and merge with Glaucoma results
       drSnapshot.docs.forEach((doc) => {
         const data = doc.data()
         const imageId = data.imageId
         
         if (scansMap.has(imageId)) {
-          // Merge DR data into existing scan
           const scan = scansMap.get(imageId)
           scan.drResult = data.result_msg
           scan.drConfidence = data.confidence !== undefined ? data.confidence : extractConfidence(data.result_msg)
           scan.drDoctorFeedback = data.doctor_feedback || ''
-          // Use the latest date
           if (data.date && (!scan.date || new Date(data.date) > new Date(scan.date))) {
             scan.date = data.date
           }
         } else {
-          // Create new scan entry for DR-only result
           scansMap.set(imageId, {
             id: imageId,
             imageId: imageId,
@@ -97,14 +90,12 @@ const PatientHistory = () => {
         }
       })
 
-      // Convert map to array and sort by date
       const scans = Array.from(scansMap.values()).sort((a, b) => {
         const dateA = a.date ? new Date(a.date) : 0
         const dateB = b.date ? new Date(b.date) : 0
         return dateB - dateA
       })
       
-      // Fetch images from Supabase for each scan (parallel)
       await Promise.all(scans.map((scan) => fetchImageUrls(scan.imageId)))
 
       setScanHistory(scans)
@@ -124,7 +115,7 @@ const PatientHistory = () => {
   }
 
   const fetchImageUrls = async (imageId) => {
-    if (imageData[imageId] || imageLoading[imageId]) return // Already cached or loading
+    if (imageData[imageId] || imageLoading[imageId]) return 
 
     try {
       setImageLoading(prev => ({ ...prev, [imageId]: true }))
@@ -148,13 +139,10 @@ const PatientHistory = () => {
           ...prev,
           [imageId]: {
             original: data.Image_url,
-            // Glaucoma images
             glaucomaHeatmap: data.glaucoma_heatmap_url,
             glaucomaOverlay: data.glaucoma_overlay_url,
-            // DR images
             drHeatmap: data.dr_heatmap_url,
             drOverlay: data.dr_overlay_url,
-            // Backward compatibility
             heatmap: data.heatmap_url || data.glaucoma_heatmap_url || data.dr_heatmap_url,
             overlay: data.overlay_url || data.glaucoma_overlay_url || data.dr_overlay_url
           }
@@ -170,17 +158,15 @@ const PatientHistory = () => {
   }
 
   const extractConfidence = (resultMsg) => {
-    // Extract confidence from result message if available
-    // For now, return a placeholder based on message content
     if (!resultMsg) return 0
     
     const lowerMsg = resultMsg.toLowerCase()
     if (lowerMsg.includes('normal') || lowerMsg.includes('no') || lowerMsg.includes('negative')) {
-      return Math.random() * 0.3 // Low confidence for normal
+      return Math.random() * 0.3 
     } else if (lowerMsg.includes('mild') || lowerMsg.includes('early')) {
-      return 0.3 + Math.random() * 0.3 // Medium confidence
+      return 0.3 + Math.random() * 0.3 
     } else {
-      return 0.6 + Math.random() * 0.4 // High confidence for positive
+      return 0.6 + Math.random() * 0.4 
     }
   }
 
@@ -200,10 +186,17 @@ const PatientHistory = () => {
     }
   }
 
-  const getStatus = (glaucomaConfidence) => {
-    if (!glaucomaConfidence) return 'success'
-    if (glaucomaConfidence >= 0.7) return 'danger'
-    if (glaucomaConfidence >= 0.5) return 'warning'
+  const getStatus = (confidence, resultMsg = '') => {
+    if (!confidence) return 'success'
+    const lowerMsg = resultMsg ? resultMsg.toLowerCase() : ''
+    const isNegativeResult = lowerMsg.includes('no') || lowerMsg.includes('normal') || lowerMsg.includes('negative')
+
+    if (isNegativeResult) {
+      return confidence >= 0.7 ? 'success' : 'warning'
+    }
+
+    if (confidence >= 0.7) return 'danger'
+    if (confidence >= 0.5) return 'warning'
     return 'success'
   }
 
@@ -213,8 +206,15 @@ const PatientHistory = () => {
     return 'badge-danger'
   }
 
-  const getConfidenceColor = (confidence) => {
+  const getConfidenceColor = (confidence, resultMsg = '') => {
     if (!confidence) return 'text-dark-400'
+    const lowerMsg = resultMsg ? resultMsg.toLowerCase() : ''
+    const isNegativeResult = lowerMsg.includes('no') || lowerMsg.includes('normal') || lowerMsg.includes('negative')
+
+    if (isNegativeResult) {
+      return confidence >= 0.7 ? 'text-accent-400' : 'text-yellow-400'
+    }
+
     if (confidence >= 0.7) return 'text-red-400'
     if (confidence >= 0.5) return 'text-yellow-400'
     return 'text-accent-400'
@@ -269,8 +269,8 @@ const PatientHistory = () => {
               className="space-y-4"
             >
               {scanHistory.map((scan, index) => {
-                const glaucomaStatus = getStatus(scan.glaucomaConfidence)
-                const drStatus = getStatus(scan.drConfidence)
+                const glaucomaStatus = getStatus(scan.glaucomaConfidence, scan.glaucomaResult)
+                const drStatus = getStatus(scan.drConfidence, scan.drResult)
                 const images = imageData[scan.imageId] || {}
                 const isExpanded = expandedScan === scan.id
                 const isImageLoading = imageLoading[scan.imageId]
@@ -317,7 +317,7 @@ const PatientHistory = () => {
                           {scan.glaucomaResult && (
                             <div>
                               <p className="text-xs text-dark-500 mb-1">Glaucoma Detection</p>
-                              <p className={`text-sm font-medium ${getConfidenceColor(scan.glaucomaConfidence)}`}>
+                              <p className={`text-sm font-medium ${getConfidenceColor(scan.glaucomaConfidence, scan.glaucomaResult)}`}>
                                 {scan.glaucomaResult}
                               </p>
                               {scan.glaucomaConfidence !== null && (
@@ -330,7 +330,7 @@ const PatientHistory = () => {
                           {scan.drResult && (
                             <div>
                               <p className="text-xs text-dark-500 mb-1">DR Detection</p>
-                              <p className={`text-sm font-medium ${getConfidenceColor(scan.drConfidence)}`}>
+                              <p className={`text-sm font-medium ${getConfidenceColor(scan.drConfidence, scan.drResult)}`}>
                                 {scan.drResult}
                               </p>
                               {scan.drConfidence !== null && (
@@ -379,7 +379,6 @@ const PatientHistory = () => {
                           className="border-t border-white/10 overflow-hidden"
                         >
                           <div className="p-6 space-y-6">
-                            {/* Images Section - Always show when expanded */}
                             <div>
                               <h4 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
                                 <ImageIcon className="w-4 h-4" />
@@ -394,7 +393,6 @@ const PatientHistory = () => {
                                 <>
                                   {(images.original || images.glaucomaHeatmap || images.glaucomaOverlay || images.drHeatmap || images.drOverlay) ? (
                                     <div className="space-y-6">
-                                      {/* Original Image */}
                                       {images.original && (
                                         <div>
                                           <h5 className="text-xs font-semibold text-white mb-3">Original Image</h5>
@@ -409,7 +407,6 @@ const PatientHistory = () => {
                                         </div>
                                       )}
 
-                                      {/* Glaucoma Visualizations */}
                                       {(images.glaucomaHeatmap || images.glaucomaOverlay) && (
                                         <div>
                                           <h5 className="text-xs font-semibold text-white mb-3">Glaucoma Analysis</h5>
@@ -440,7 +437,6 @@ const PatientHistory = () => {
                                         </div>
                                       )}
 
-                                      {/* DR Visualizations */}
                                       {(images.drHeatmap || images.drOverlay) && (
                                         <div>
                                           <h5 className="text-xs font-semibold text-white mb-3">Diabetic Retinopathy Analysis</h5>
@@ -480,7 +476,6 @@ const PatientHistory = () => {
                               )}
                             </div>
 
-                            {/* Doctor Feedback */}
                             {(scan.glaucomaDoctorFeedback || scan.drDoctorFeedback) && (
                               <div className="space-y-3">
                                 {scan.glaucomaDoctorFeedback && (
@@ -498,7 +493,6 @@ const PatientHistory = () => {
                               </div>
                             )}
 
-                            {/* Image ID for reference */}
                             <div className="text-xs text-dark-500">
                               Image ID: <span className="font-mono text-dark-400">{scan.imageId}</span>
                             </div>

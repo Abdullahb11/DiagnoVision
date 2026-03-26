@@ -39,7 +39,14 @@ if [ ! -d "venv" ]; then
         exit 1
     fi
 else
-    echo "Virtual environment found."
+    echo "Virtual environment found. Syncing backend dependencies..."
+    source venv/bin/activate
+    pip install -r requirements.txt
+    if [ $? -ne 0 ]; then
+        echo "ERROR: pip install failed."
+        cd ..
+        exit 1
+    fi
 fi
 
 # Start backend in background
@@ -53,17 +60,14 @@ cd ..
 # Wait a moment for backend to start
 sleep 2
 
-# Check if frontend node_modules exists
 cd frontend
-if [ ! -d "node_modules" ]; then
-    echo "Frontend dependencies not found. Installing..."
-    npm install
-    if [ $? -ne 0 ]; then
-        echo "ERROR: Failed to install frontend dependencies."
-        cd ..
-        kill $BACKEND_PID 2>/dev/null
-        exit 1
-    fi
+echo "Syncing frontend dependencies..."
+npm install
+if [ $? -ne 0 ]; then
+    echo "ERROR: npm install failed."
+    cd ..
+    kill $BACKEND_PID 2>/dev/null
+    exit 1
 fi
 
 # Start frontend in background
