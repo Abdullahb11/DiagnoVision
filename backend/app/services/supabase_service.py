@@ -231,7 +231,46 @@ class SupabaseService:
         except Exception as e:
             logger.error(f"Error uploading to Supabase (async): {str(e)}")
             # Don't raise - this is background task, failure shouldn't affect response
-    
+
+    def upload_scan_report_pdf(self, patient_id: str, image_id: str, pdf_bytes: bytes) -> str:
+        """
+        Upload a scan report PDF to Supabase Storage.
+
+        Uses bucket from settings.SUPABASE_SCAN_REPORTS_BUCKET (default: images).
+        Path: scan_reports/{patient_id}/{image_id}.pdf
+
+        Returns a URL suitable for doctors to open/download (public URL, or signed URL
+        if the client supports it and the bucket is private).
+        """
+        if not pdf_bytes:
+            raise ValueError("Empty PDF bytes")
+
+        bucket = settings.SUPABASE_SCAN_REPORTS_BUCKET or "images"
+        path = f"scan_reports/{patient_id}/{image_id}.pdf"
+
+        self.supabase.storage.from_(bucket).upload(
+            path,
+            pdf_bytes,
+            file_options={
+                "content-type": "application/pdf",
+                "x-upsert": "true",
+            },
+        )
+
+        # Prefer signed URL (works for private buckets); fall back to public URL
+        try:
+            signed = self.supabase.storage.from_(bucket).create_signed_url(
+                path, 60 * 60 * 24 * 365
+            )
+            if isinstance(signed, dict) and signed.get("signedURL"):
+                return signed["signedURL"]
+            if isinstance(signed, dict) and signed.get("signedUrl"):
+                return signed["signedUrl"]
+        except Exception as e:
+            logger.debug("Signed URL not used for scan PDF (%s), using public URL", e)
+
+        return self.supabase.storage.from_(bucket).get_public_url(path)
+
     def _combine_gradcams(self, glaucoma_gradcam, dr_gradcam):
         """Combine Glaucoma and DR GradCAM heatmaps"""
         # TODO: Implement combination logic (overlay, side-by-side, etc.)

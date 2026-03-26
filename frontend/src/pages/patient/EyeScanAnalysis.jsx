@@ -133,6 +133,35 @@ const EyeScanAnalysis = () => {
               date: currentDate
             })
           }
+
+          // PDF + notify associated doctors (non-blocking for UX; failures are logged only)
+          fetch(API_ENDPOINTS.scanReportNotify, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              patient_id: currentUser.uid,
+              image_id: data.image_id,
+              patient_display_name: currentUser.displayName || '',
+              glaucoma_result_msg: data.glaucoma?.result_msg || '',
+              glaucoma_confidence: data.glaucoma?.confidence ?? null,
+              dr_result_msg: data.dr?.result_msg || '',
+              dr_confidence: data.dr?.confidence ?? null,
+              image_base64: data.image_base64 || null,
+              glaucoma_heatmap_base64: data.glaucoma_heatmap_base64 || null,
+              glaucoma_overlay_base64: data.glaucoma_overlay_base64 || null,
+              dr_heatmap_base64: data.dr_heatmap_base64 || null,
+              dr_overlay_base64: data.dr_overlay_base64 || null
+            })
+          })
+            .then((r) => r.json().catch(() => ({})))
+            .then((payload) => {
+              if (payload?.doctors_notified > 0) {
+                console.log('Scan PDF sent to', payload.doctors_notified, 'doctor(s)')
+              } else if (payload?.skipped) {
+                console.warn('Scan PDF notify:', payload.skipped)
+              }
+            })
+            .catch((e) => console.warn('Scan PDF notify request failed:', e))
         } catch (firebaseError) {
           console.error('Error storing results in Firebase:', firebaseError)
         }

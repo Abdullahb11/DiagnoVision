@@ -44,7 +44,15 @@ if not exist venv (
         exit /b 1
     )
 ) else (
-    echo Virtual environment found.
+    echo Virtual environment found. Syncing backend dependencies...
+    call venv\Scripts\activate.bat
+    pip install -r requirements.txt
+    if %ERRORLEVEL% NEQ 0 (
+        echo ERROR: pip install failed.
+        cd ..
+        pause
+        exit /b 1
+    )
 )
 
 REM Start backend in a new window
@@ -56,17 +64,15 @@ cd ..
 REM Wait a moment for backend to start
 timeout /t 2 /nobreak >nul
 
-REM Check if frontend node_modules exists
+REM Frontend: install or sync dependencies every run
 cd frontend
-if not exist node_modules (
-    echo Frontend dependencies not found. Installing...
-    call npm install
-    if %ERRORLEVEL% NEQ 0 (
-        echo ERROR: Failed to install frontend dependencies.
-        cd ..
-        pause
-        exit /b 1
-    )
+echo Syncing frontend dependencies...
+call npm install
+if %ERRORLEVEL% NEQ 0 (
+    echo ERROR: npm install failed.
+    cd ..
+    pause
+    exit /b 1
 )
 
 REM Start frontend in a new window

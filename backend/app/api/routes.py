@@ -1,6 +1,7 @@
 from fastapi import APIRouter, File, UploadFile, Form, HTTPException
 from fastapi.responses import JSONResponse
 from typing import Optional
+from pydantic import BaseModel
 import logging
 import base64
 import asyncio
@@ -9,6 +10,8 @@ import uuid
 from app.pipelines.glaucoma_pipeline import GlaucomaPipeline
 from app.pipelines.dr_pipeline import DRPipeline
 from app.services.supabase_service import SupabaseService
+from app.services.firebase_service import firebase_service
+from app.services.scan_pdf import build_scan_report_pdf
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -140,4 +143,65 @@ async def analyze_image(
     except Exception as e:
         logger.error(f"Error during analysis: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+
+class ScanReportNotifyRequest(BaseModel):
+    patient_id: str
+    image_id: str
+    patient_display_name: Optional[str] = None
+    glaucoma_result_msg: str = ""
+    glaucoma_confidence: Optional[float] = None
+    dr_result_msg: str = ""
+    dr_confidence: Optional[float] = None
+    image_base64: Optional[str] = None
+    glaucoma_heatmap_base64: Optional[str] = None
+    glaucoma_overlay_base64: Optional[str] = None
+    dr_heatmap_base64: Optional[str] = None
+    dr_overlay_base64: Optional[str] = None
+
+
+@router.post("/scan-report-notify")
+async def scan_report_notify(body: ScanReportNotifyRequest):
+    """
+    Build a PDF from scan images + summaries, upload to Supabase Storage,
+    and notify all doctors linked to the patient (patient_doctor status=active).
+    """
+    try:
+        pdf_bytes = build_scan_report_pdf(
+            patient_display_name=body.patient_display_name or "Patient",
+            image_id=body.image_id,
+            glaucoma_msg=body.glaucoma_result_msg or "",
+            dr_msg=body.dr_result_msg or "",
+            glaucoma_confidence=body.glaucoma_confidence,
+            dr_confidence=body.dr_confidence,
+            image_base64=body.image_base64,
+            glaucoma_heatmap_base64=body.glaucoma_heatmap_base64,
+            glaucoma_overlay_base64=body.glaucoma_overlay_base64,
+            dr_heatmap_base64=body.dr_heatmap_base64,
+            dr_overlay_base64=body.dr_overlay_base64,
+        )
+        pdf_url = supabase_service.upload_scan_report_pdf(
+            body.patient_id,
+            body.image_id,
+            pdf_bytes,
+        )
+        notify_result = firebase_service.notify_associated_doctors_scan_report(
+            patient_id=body.patient_id,
+            image_id=body.image_id,
+            patient_display_name=body.patient_display_name or "Patient",
+            pdf_url=pdf_url,
+            glaucoma_msg=body.glaucoma_result_msg or "",
+            dr_msg=body.dr_result_msg or "",
+        )
+        return JSONResponse(
+            content={
+                "success": notify_result.get("ok", False),
+                "doctors_notified": notify_result.get("doctors_notified", 0),
+                "skipped": notify_result.get("skipped"),
+                "pdf_url": notify_result.get("pdf_url"),
+            }
+        )
+    except Exception as e:
+        logger.error(f"scan-report-notify failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 

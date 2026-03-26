@@ -40,7 +40,12 @@
 
 ### notifications
 - `user_id` - Foreign key to user.id
-- `notification` - Notification content
+- `notification` - Notification content (legacy; newer rows use `title` + `message`)
+- `title` - Short heading (optional)
+- `message` - Body text (optional)
+- `read` - Boolean read flag (optional)
+- `createdAt` - Server timestamp (optional)
+- `data` - Structured payload (optional), e.g. `{ kind: "scan_report", pdf_url, ... }` where `pdf_url` is a Supabase Storage (or other HTTPS) link to the report PDF
 
 ### glucoma_result
 - `patientId` - Foreign key to patient.user_id

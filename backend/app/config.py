@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Optional
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -8,13 +9,26 @@ load_dotenv()
 BACKEND_DIR = Path(__file__).parent.parent
 MODELS_DIR = BACKEND_DIR / "models"
 
+
+def _resolve_firebase_key_path() -> Optional[str]:
+    """Resolve service account path relative to backend/ when not absolute."""
+    raw = os.getenv("FIREBASE_SERVICE_ACCOUNT_KEY_PATH")
+    if not raw:
+        return None
+    p = Path(raw.strip().strip('"').strip("'"))
+    resolved = (p.resolve() if p.is_absolute() else (BACKEND_DIR / p).resolve())
+    return str(resolved)
+
+
 class Settings:
     # Supabase Configuration
     SUPABASE_URL = os.getenv("SUPABASE_URL")
     SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
     
-    # Firebase Configuration
-    FIREBASE_SERVICE_ACCOUNT_KEY_PATH = os.getenv("FIREBASE_SERVICE_ACCOUNT_KEY_PATH")
+    # Firebase Configuration (Firestore only; scan PDFs use Supabase Storage)
+    FIREBASE_SERVICE_ACCOUNT_KEY_PATH = _resolve_firebase_key_path()
+    # Supabase Storage bucket for scan PDF reports (default: same bucket as retinal images)
+    SUPABASE_SCAN_REPORTS_BUCKET = os.getenv("SUPABASE_SCAN_REPORTS_BUCKET", "images")
     
     # API Configuration
     API_PORT = int(os.getenv("API_PORT", 8000))
