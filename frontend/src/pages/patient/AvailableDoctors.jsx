@@ -15,12 +15,12 @@ const AvailableDoctors = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [connectLoadingId, setConnectLoadingId] = useState('')
-  const [excludedDoctorIds, setExcludedDoctorIds] = useState(new Set())
 
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
-        // Exclude doctors already connected/requested by this patient
+        // Exclude only doctors with active or requested links.
+        // If a prior request was declined/rejected, show doctor again.
         let exclude = new Set()
         if (currentUser) {
           const relQuery = query(
@@ -30,12 +30,11 @@ const AvailableDoctors = () => {
           const relSnap = await getDocs(relQuery)
           exclude = new Set(
             relSnap.docs
-              .map(d => d.data()?.doctorId)
+              .map((d) => d.data() || {})
+              .filter((rel) => ['active', 'requested', 'pending'].includes(String(rel.status || '').toLowerCase()))
+              .map((rel) => rel.doctorId)
               .filter(Boolean)
           )
-          setExcludedDoctorIds(exclude)
-        } else {
-          setExcludedDoctorIds(new Set())
         }
 
         const querySnapshot = await getDocs(collection(db, 'doctor'))
@@ -69,7 +68,7 @@ const AvailableDoctors = () => {
     }
 
     fetchDoctors()
-  }, [currentUser, excludedDoctorIds])
+  }, [currentUser])
 
   const handleConnect = async (doctorId) => {
     if (!currentUser) {
@@ -109,7 +108,7 @@ const AvailableDoctors = () => {
       })
 
       // Immediately hide this doctor from the list
-      setExcludedDoctorIds((prev) => new Set([...prev, doctorId]))
+      setDoctors((prev) => prev.filter((d) => d.id !== doctorId))
     } catch (err) {
       console.error('Connect error:', err)
       setError('Failed to send request. Please try again.')
