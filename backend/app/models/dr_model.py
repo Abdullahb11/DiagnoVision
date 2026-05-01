@@ -64,24 +64,20 @@ class DRModel:
             }
         
         try:
-            # Ensure image is on correct device and has batch dimension
             if len(preprocessed_image.shape) == 3:
                 preprocessed_image = preprocessed_image.unsqueeze(0)
             
             preprocessed_image = preprocessed_image.to(self.device)
             
-            # Run prediction
             with torch.no_grad():
                 outputs = self.model(preprocessed_image)
                 probabilities = torch.nn.functional.softmax(outputs, dim=1)
             
-            # Get prediction
             probs = probabilities[0].cpu().numpy()
-            pred_idx = int(np.argmax(probs))  # Convert numpy.int64 to Python int for Captum
+            pred_idx = int(np.argmax(probs))  
             confidence = float(probs[pred_idx])
             pred_class = self.class_names[pred_idx]
             
-            # Determine result message
             if pred_class == 'No DR' and confidence > 0.5:
                 result = "No signs detected"
             else:

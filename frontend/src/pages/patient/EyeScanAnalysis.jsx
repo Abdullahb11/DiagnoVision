@@ -65,7 +65,6 @@ const EyeScanAnalysis = () => {
     setAnalysisResults(null)
 
     try {
-      // Check if backend is reachable first
       const healthCheck = await fetch(API_ENDPOINTS.health).catch(() => null)
       if (!healthCheck || !healthCheck.ok) {
         throw new Error(
@@ -91,18 +90,13 @@ const EyeScanAnalysis = () => {
       const data = await response.json()
 
       if (data.success) {
-        // Use base64 images for immediate display, fallback to URLs if available
         setAnalysisResults({
           ...data,
-          // Prioritize base64 for immediate display, URLs will be null initially
           image_url: data.image_base64 || data.image_url,
-          // Glaucoma images
           glaucoma_heatmap_url: data.glaucoma_heatmap_base64 || data.glaucoma_heatmap_url,
           glaucoma_overlay_url: data.glaucoma_overlay_base64 || data.glaucoma_overlay_url,
-          // DR images
           dr_heatmap_url: data.dr_heatmap_base64 || data.dr_heatmap_url,
           dr_overlay_url: data.dr_overlay_base64 || data.dr_overlay_url,
-          // Backward compatibility
           heatmap_url: data.heatmap_base64 || data.heatmap_url,
           overlay_url: data.overlay_base64 || data.overlay_url,
         })
@@ -134,7 +128,6 @@ const EyeScanAnalysis = () => {
             })
           }
 
-          // PDF + notify associated doctors (non-blocking for UX; failures are logged only)
           fetch(API_ENDPOINTS.scanReportNotify, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -172,7 +165,6 @@ const EyeScanAnalysis = () => {
       console.error('Analysis error:', err)
       let errorMessage = err.message || 'Failed to analyze image. Please try again.'
       
-      // Provide helpful error messages
       if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
         errorMessage = `Cannot connect to backend server. Please ensure:
         1. Backend server is running on http://localhost:8000
@@ -195,7 +187,6 @@ const EyeScanAnalysis = () => {
       return 'text-yellow-400'; // Low confidence of NO disease
     }
   
-    // Original logic for when disease IS detected
     if (confidence >= 0.7) return 'text-red-400';
     if (confidence >= 0.5) return 'text-yellow-400';
     return 'text-accent-400';
@@ -214,7 +205,6 @@ const EyeScanAnalysis = () => {
     return 'from-accent-500/10 to-accent-500/5 border-accent-500/20';
   };
   
-  // Update for the progress bar color specifically
   const getBarColor = (confidence, resultMsg = '') => {
     const isNegativeResult = resultMsg.toLowerCase().includes('no');
     if (isNegativeResult) {

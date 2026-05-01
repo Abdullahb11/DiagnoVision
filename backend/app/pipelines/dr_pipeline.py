@@ -28,21 +28,18 @@ class DRPipeline:
         try:
             logger.info(f"Starting DR pipeline for patient {patient_id}")
             
-            # Step 1: Preprocess image (matching training notebook)
             preprocessed_image = self.preprocessor.preprocess(image_bytes)
             logger.debug("Image preprocessed for DR model")
             
-            # Step 2: Run model inference
             prediction = self.model.predict(preprocessed_image)
             logger.debug(f"DR prediction: {prediction['prediction']} (confidence: {prediction['confidence']:.2f})")
             
-            # Step 3: Generate GradCAM with heatmap and overlay (use predicted class index)
-            # Class indices: 0=No DR, 1=Mild/Mod, 2=Severe, 3=Proliferative
+        
             predicted_class_idx = prediction.get("predicted_class_idx", 0)
             gradcam_results = self.gradcam.generate_gradcam(preprocessed_image, image_bytes, predicted_class_idx)
             logger.debug("GradCAM generated for DR")
             
-            # Format result message
+            
             result_msg = self._format_result_message(prediction)
             
             return {
