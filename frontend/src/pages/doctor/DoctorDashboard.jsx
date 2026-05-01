@@ -1,16 +1,97 @@
 import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Layout from '../../components/Layout'
 import { useAuth } from '../../contexts/AuthContext'
+import { collection, onSnapshot, query, where, doc, updateDoc } from 'firebase/firestore'
+import { db } from '../../config/firebase'
 import { 
-  Users, Clock, MessageSquare, ScanEye,
-  TrendingUp, AlertCircle, ArrowRight, Activity,
-  CheckCircle, Eye, Calendar, FileText
+  Users, Clock, MessageSquare,
+  TrendingUp, ArrowRight,
+  CheckCircle, Eye, ExternalLink
 } from 'lucide-react'
 
 const DoctorDashboard = () => {
   const { currentUser } = useAuth()
-  
+  const [pendingReviews, setPendingReviews] = useState([])
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
+
+  useEffect(() => {
+    if (!currentUser) {
+      setPendingReviews([])
+      return
+    }
+
+    // Realtime: pending review = unread scan_report notification with a PDF URL
+    const q = query(
+      collection(db, 'notifications'),
+      where('user_id', '==', currentUser.uid),
+      where('read', '==', false)
+    )
+
+    const unsub = onSnapshot(q, (snap) => {
+      const rows = snap.docs
+        .map((d) => {
+          const n = d.data() || {}
+          const extra = n.data && typeof n.data === 'object' ? n.data : {}
+          const pdfUrl = extra.pdf_url || n.pdf_url || null
+          const kind = extra.kind || ''
+          if (!pdfUrl || kind !== 'scan_report') return null
+          return {
+            id: d.id,
+            patientName: extra.patient_name || 'Patient',
+            imageId: extra.image_id || '',
+            summaryDr: extra.summary_dr || '',
+            pdfUrl,
+            createdAt: n.createdAt || null,
+          }
+        })
+        .filter(Boolean)
+        .sort((a, b) => {
+          const ta = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0
+          const tb = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0
+          return tb - ta
+        })
+      setPendingReviews(rows)
+    })
+
+    return () => unsub()
+  }, [currentUser])
+
+  useEffect(() => {
+    if (!currentUser) {
+      setUnreadMessagesCount(0)
+      return
+    }
+
+    // Realtime count of patient-sent messages for this doctor.
+    // Note: current schema has no per-message read flag, so this is the closest live signal.
+    const q = query(
+      collection(db, 'messages'),
+      where('doctorId', '==', currentUser.uid),
+      where('sent_by_patient', '==', true)
+    )
+
+    const unsub = onSnapshot(q, (snap) => {
+      const unread = snap.docs.filter((d) => {
+        const x = d.data() || {}
+        return x.read_by_doctor !== true
+      })
+      setUnreadMessagesCount(unread.length)
+    })
+
+    return () => unsub()
+  }, [currentUser])
+
+  const markReviewRead = async (notificationId) => {
+    if (!notificationId) return
+    try {
+      await updateDoc(doc(db, 'notifications', notificationId), { read: true })
+    } catch (e) {
+      console.error('Failed to mark scan review as read:', e)
+    }
+  }
+
   const stats = [
     { 
       label: 'Total Patients', 
@@ -23,54 +104,21 @@ const DoctorDashboard = () => {
     },
     { 
       label: 'Pending Reviews', 
-      value: '8', 
+      value: String(pendingReviews.length), 
       icon: Clock,
-      change: '3 urgent',
+      change: pendingReviews.length > 0 ? 'Unread scan reports' : 'No pending scan reviews',
       color: 'from-yellow-500 to-yellow-600',
       bgColor: 'bg-yellow-500/10',
       textColor: 'text-yellow-400'
     },
     { 
       label: 'Unread Messages', 
-      value: '12', 
+      value: String(unreadMessagesCount), 
       icon: MessageSquare,
-      change: '5 new today',
+      change: unreadMessagesCount > 0 ? 'Realtime from patients' : 'No patient messages',
       color: 'from-purple-500 to-purple-600',
       bgColor: 'bg-purple-500/10',
       textColor: 'text-purple-400'
-    },
-    { 
-      label: 'Scans This Month', 
-      value: '47', 
-      icon: ScanEye,
-      change: '+12% vs last',
-      color: 'from-accent-500 to-accent-600',
-      bgColor: 'bg-accent-500/10',
-      textColor: 'text-accent-400'
-    },
-  ]
-
-  const pendingReviews = [
-    { 
-      patient: 'John Smith', 
-      eye: 'Left Eye',
-      time: '2 hours ago', 
-      risk: 'High Risk',
-      riskColor: 'badge-danger'
-    },
-    { 
-      patient: 'Sarah Johnson', 
-      eye: 'Both Eyes',
-      time: '5 hours ago', 
-      risk: 'Medium Risk',
-      riskColor: 'badge-warning'
-    },
-    { 
-      patient: 'Mike Williams', 
-      eye: 'Right Eye',
-      time: '1 day ago', 
-      risk: 'Low Risk',
-      riskColor: 'badge-success'
     },
   ]
 
@@ -115,7 +163,7 @@ const DoctorDashboard = () => {
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {stats.map((stat, index) => {
             const Icon = stat.icon
             return (
@@ -161,32 +209,45 @@ const DoctorDashboard = () => {
             </div>
 
             <div className="space-y-3">
-              {pendingReviews.map((review, index) => (
+              {pendingReviews.length === 0 && (
+                <div className="p-4 rounded-xl bg-dark-800/50 border border-white/5 text-sm text-dark-400">
+                  No pending scan-report reviews.
+                </div>
+              )}
+              {pendingReviews.map((review) => (
                 <div
-                  key={index}
+                  key={review.id}
                   className="flex items-center justify-between p-4 rounded-xl bg-dark-800/50 border border-white/5 hover:border-white/10 transition-all duration-300"
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-medical-500 flex items-center justify-center">
                       <span className="text-white font-semibold text-sm">
-                        {review.patient.split(' ').map(n => n[0]).join('')}
+                        {review.patientName.split(' ').map(n => n[0]).join('')}
                       </span>
                     </div>
                     <div>
-                      <p className="font-medium text-white">{review.patient}</p>
+                      <p className="font-medium text-white">{review.patientName}</p>
                       <p className="text-sm text-dark-400 flex items-center gap-2">
                         <Eye className="w-3 h-3" />
-                        {review.eye}
-                        <span className="text-dark-600">|</span>
-                        {review.time}
+                        Scan report pending review
+                        {review.imageId ? <span className="text-dark-600">| {review.imageId.slice(0, 8)}</span> : null}
                       </p>
+                      {review.summaryDr ? (
+                        <p className="text-xs text-dark-500 mt-1 line-clamp-1">{review.summaryDr}</p>
+                      ) : null}
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className={review.riskColor}>{review.risk}</span>
-                    <button className="p-2 rounded-lg bg-primary-500/10 hover:bg-primary-500/20 text-primary-400 transition-colors">
-                      <FileText className="w-4 h-4" />
-                    </button>
+                    <a
+                      href={review.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-lg bg-primary-500/10 hover:bg-primary-500/20 text-primary-400 transition-colors"
+                      title="Open report PDF"
+                      onClick={() => markReviewRead(review.id)}
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
                   </div>
                 </div>
               ))}
@@ -227,50 +288,8 @@ const DoctorDashboard = () => {
                 )
               })}
             </div>
-
-            <div className="mt-6 p-4 rounded-xl bg-gradient-to-br from-primary-500/10 to-medical-500/10 border border-primary-500/20">
-              <div className="flex items-center gap-3 mb-3">
-                <Activity className="w-5 h-5 text-primary-400" />
-                <p className="font-medium text-white">Today's Overview</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-2xl font-bold text-white">5</p>
-                  <p className="text-xs text-dark-400">Scans reviewed</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-white">8</p>
-                  <p className="text-xs text-dark-400">Messages sent</p>
-                </div>
-              </div>
-            </div>
           </motion.div>
         </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-          className="glass-card p-6 bg-gradient-to-br from-yellow-500/5 to-orange-500/5"
-        >
-          <div className="flex flex-col md:flex-row md:items-center gap-6">
-            <div className="p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20">
-              <AlertCircle className="w-8 h-8 text-yellow-400" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-white mb-2">
-                High Priority Reviews Pending
-              </h3>
-              <p className="text-dark-400">
-                You have 3 patient scans flagged as high risk that require immediate attention.
-              </p>
-            </div>
-            <Link to="/doctor/patients" className="btn-primary flex items-center gap-2 whitespace-nowrap">
-              Review Now
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-          </div>
-        </motion.div>
       </div>
     </Layout>
   )

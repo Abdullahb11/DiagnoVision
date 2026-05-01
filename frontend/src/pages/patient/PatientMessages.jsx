@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import Layout from '../../components/Layout'
 import { useAuth } from '../../contexts/AuthContext'
@@ -14,6 +15,7 @@ import {
   getDoc,
   doc,
   limit,
+  writeBatch,
 } from 'firebase/firestore'
 import { db } from '../../config/firebase'
 import {
@@ -49,6 +51,7 @@ const formatRelative = (ts) => {
 
 const PatientMessages = () => {
   const { currentUser } = useAuth()
+  const location = useLocation()
   const [conversations, setConversations] = useState([])
   const [selectedDoctorId, setSelectedDoctorId] = useState(null)
   const [messages, setMessages] = useState([])
@@ -59,6 +62,7 @@ const PatientMessages = () => {
   const bottomRef = useRef(null)
 
   const selectedConv = conversations.find((c) => c.doctorId === selectedDoctorId)
+  const preferredDoctorId = new URLSearchParams(location.search).get('doctorId')
 
   useEffect(() => {
     if (!currentUser) return
@@ -115,7 +119,10 @@ const PatientMessages = () => {
               lastAt: lastByDoctor[r.doctorId]?.createdAt || null,
             }))
           )
-          if (rows.length && !selectedDoctorId) {
+          const hasPreferred = preferredDoctorId && rows.some((r) => r.doctorId === preferredDoctorId)
+          if (hasPreferred) {
+            setSelectedDoctorId(preferredDoctorId)
+          } else if (rows.length && !selectedDoctorId) {
             setSelectedDoctorId(rows[0].doctorId)
           }
         }
@@ -131,7 +138,7 @@ const PatientMessages = () => {
     return () => {
       cancelled = true
     }
-  }, [currentUser])
+  }, [currentUser, preferredDoctorId, selectedDoctorId])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -154,6 +161,26 @@ const PatientMessages = () => {
     const unsub = onSnapshot(
       q,
       (snap) => {
+        const markRead = async () => {
+          const unread = snap.docs.filter((d) => {
+            const x = d.data() || {}
+            return (
+              (x.sent_by_patient === false || x.sent_by_patient === 'false') &&
+              x.read_by_patient !== true
+            )
+          })
+          if (!unread.length) return
+          const batch = writeBatch(db)
+          unread.forEach((d) => {
+            batch.update(d.ref, {
+              read_by_patient: true,
+              read_by_patient_at: serverTimestamp(),
+            })
+          })
+          await batch.commit()
+        }
+        markRead().catch((e) => console.error('Failed to mark patient message read:', e))
+
         setMessages(
           snap.docs.map((d) => {
             const data = d.data()
@@ -188,6 +215,7 @@ const PatientMessages = () => {
         doctorId: selectedDoctorId,
         msg: text,
         sent_by_patient: true,
+        read_by_doctor: false,
         createdAt: serverTimestamp(),
       })
     } catch (e) {

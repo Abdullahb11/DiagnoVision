@@ -14,6 +14,7 @@ import {
   getDoc,
   doc,
   limit,
+  writeBatch,
 } from 'firebase/firestore'
 import { db } from '../../config/firebase'
 import {
@@ -156,6 +157,26 @@ const DoctorMessages = () => {
     const unsub = onSnapshot(
       q,
       (snap) => {
+        const markRead = async () => {
+          const unread = snap.docs.filter((d) => {
+            const x = d.data() || {}
+            return (
+              isFromPatient(x) &&
+              x.read_by_doctor !== true
+            )
+          })
+          if (!unread.length) return
+          const batch = writeBatch(db)
+          unread.forEach((d) => {
+            batch.update(d.ref, {
+              read_by_doctor: true,
+              read_by_doctor_at: serverTimestamp(),
+            })
+          })
+          await batch.commit()
+        }
+        markRead().catch((e) => console.error('Failed to mark doctor message read:', e))
+
         setMessages(
           snap.docs.map((d) => {
             const data = d.data()
@@ -191,6 +212,7 @@ const DoctorMessages = () => {
         doctorId: currentUser.uid,
         msg: text,
         sent_by_patient: false,
+        read_by_patient: false,
         createdAt: serverTimestamp(),
       })
     } catch (e) {

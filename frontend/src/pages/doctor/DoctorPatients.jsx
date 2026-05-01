@@ -3,8 +3,7 @@ import { motion } from 'framer-motion'
 import Layout from '../../components/Layout'
 import { useAuth } from '../../contexts/AuthContext'
 import { 
-  Users, Search, Eye, Calendar, MessageSquare,
-  Filter, ChevronRight, Activity, FileText, Clock
+  Users, Search, Calendar, Filter
 } from 'lucide-react'
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore'
 import { db } from '../../config/firebase'
@@ -31,21 +30,46 @@ const DoctorPatients = () => {
         const relSnap = await getDocs(relQuery)
         const patientIds = Array.from(new Set(relSnap.docs.map(d => d.data().patientId).filter(Boolean)))
 
+        // Pull doctor notifications to derive latest scan date + model summaries per patient.
+        const notifQuery = query(
+          collection(db, 'notifications'),
+          where('user_id', '==', currentUser.uid)
+        )
+        const notifSnap = await getDocs(notifQuery)
+        const latestScanByPatient = {}
+        notifSnap.docs.forEach((n) => {
+          const row = n.data() || {}
+          const extra = row.data && typeof row.data === 'object' ? row.data : {}
+          if (extra.kind !== 'scan_report') return
+          const patientId = extra.patient_id
+          if (!patientId) return
+
+          const ts = row.createdAt?.toDate ? row.createdAt.toDate() : null
+          const existing = latestScanByPatient[patientId]
+          const existingTs = existing?.createdAt?.toDate ? existing.createdAt.toDate() : null
+          if (!existingTs || (ts && ts > existingTs)) {
+            latestScanByPatient[patientId] = {
+              createdAt: row.createdAt || null,
+              summaryGlaucoma: extra.summary_glaucoma || '—',
+              summaryDr: extra.summary_dr || '—'
+            }
+          }
+        })
+
         const patientDocs = await Promise.all(
           patientIds.map(async (patientId) => {
             const patientSnap = await getDoc(doc(db, 'patient', patientId))
             if (!patientSnap.exists()) return null
             const data = patientSnap.data()
+            const latestScan = latestScanByPatient[patientId] || null
             return {
               id: patientId,
               name: data.name || 'Unknown Patient',
               age: data.age || '—',
-              lastScan: data.lastScan || '—',
-              condition: data.condition || '—',
-              riskLevel: data.riskLevel || '—',
-              riskColor: data.riskColor || 'badge-success',
+              lastScanAt: latestScan?.createdAt || null,
+              summaryGlaucoma: latestScan?.summaryGlaucoma || '—',
+              summaryDr: latestScan?.summaryDr || '—',
               totalScans: data.totalScans || 0,
-              status: data.status || '—'
             }
           })
         )
@@ -81,12 +105,6 @@ const DoctorPatients = () => {
               </div>
             </div>
             
-            <div className="flex items-center gap-3">
-              <button className="btn-secondary flex items-center gap-2">
-                <Filter className="w-4 h-4" />
-                Filter
-              </button>
-            </div>
           </div>
         </motion.div>
 
@@ -128,16 +146,13 @@ const DoctorPatients = () => {
                   <tr className="border-b border-white/5">
                     <th className="text-left p-4 text-sm font-medium text-dark-400">Patient</th>
                     <th className="text-left p-4 text-sm font-medium text-dark-400">Last Scan</th>
-                    <th className="text-left p-4 text-sm font-medium text-dark-400">Condition</th>
                     <th className="text-left p-4 text-sm font-medium text-dark-400">Risk Level</th>
-                    <th className="text-left p-4 text-sm font-medium text-dark-400">Status</th>
-                    <th className="text-left p-4 text-sm font-medium text-dark-400">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {!loading && patients.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-6 text-center text-dark-400">
+                      <td colSpan={3} className="p-6 text-center text-dark-400">
                         No patients connected yet.
                       </td>
                     </tr>
@@ -166,33 +181,16 @@ const DoctorPatients = () => {
                       <td className="p-4">
                         <div className="flex items-center gap-2 text-dark-300">
                           <Calendar className="w-4 h-4 text-dark-500" />
-                          {patient.lastScan}
+                          {patient.lastScanAt?.toDate ? patient.lastScanAt.toDate().toLocaleString() : '—'}
                         </div>
                       </td>
                       <td className="p-4">
-                        <p className="text-white">{patient.condition}</p>
-                        <p className="text-xs text-dark-500">{patient.totalScans} total scans</p>
-                      </td>
-                      <td className="p-4">
-                        <span className={patient.riskColor}>{patient.riskLevel}</span>
-                      </td>
-                      <td className="p-4">
-                        <span className={`badge ${patient.status === 'Reviewed' ? 'badge-success' : 'badge-warning'}`}>
-                          {patient.status}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <button className="p-2 rounded-lg bg-primary-500/10 hover:bg-primary-500/20 text-primary-400 transition-colors" title="View Scans">
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button className="p-2 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 transition-colors" title="Message">
-                            <MessageSquare className="w-4 h-4" />
-                          </button>
-                          <button className="p-2 rounded-lg bg-accent-500/10 hover:bg-accent-500/20 text-accent-400 transition-colors" title="View Report">
-                            <FileText className="w-4 h-4" />
-                          </button>
-                        </div>
+                        <p className="text-white text-sm">
+                          <span className="text-dark-400">Glaucoma:</span> {patient.summaryGlaucoma}
+                        </p>
+                        <p className="text-white text-sm mt-1">
+                          <span className="text-dark-400">DR:</span> {patient.summaryDr}
+                        </p>
                       </td>
                     </motion.tr>
                     ))
