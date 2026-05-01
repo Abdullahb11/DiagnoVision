@@ -15,7 +15,8 @@ const DoctorDashboard = () => {
   const { currentUser } = useAuth()
   const [pendingReviews, setPendingReviews] = useState([])
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
-
+  const [totalPatientsCount, setTotalPatientsCount] = useState(0)
+  
   useEffect(() => {
     if (!currentUser) {
       setPendingReviews([])
@@ -83,6 +84,30 @@ const DoctorDashboard = () => {
     return () => unsub()
   }, [currentUser])
 
+  useEffect(() => {
+    if (!currentUser) {
+      setTotalPatientsCount(0)
+      return
+    }
+
+    const q = query(
+      collection(db, 'patient_doctor'),
+      where('doctorId', '==', currentUser.uid),
+      where('status', '==', 'active')
+    )
+
+    const unsub = onSnapshot(q, (snap) => {
+      const uniquePatientIds = new Set(
+        snap.docs
+          .map((d) => d.data()?.patientId)
+          .filter(Boolean)
+      )
+      setTotalPatientsCount(uniquePatientIds.size)
+    })
+
+    return () => unsub()
+  }, [currentUser])
+
   const markReviewRead = async (notificationId) => {
     if (!notificationId) return
     try {
@@ -95,9 +120,9 @@ const DoctorDashboard = () => {
   const stats = [
     { 
       label: 'Total Patients', 
-      value: '24', 
+      value: String(totalPatientsCount), 
       icon: Users,
-      change: '+3 this week',
+      change: totalPatientsCount > 0 ? 'Active linked patients' : 'No active patients',
       color: 'from-primary-500 to-primary-600',
       bgColor: 'bg-primary-500/10',
       textColor: 'text-primary-400'
