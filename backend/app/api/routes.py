@@ -38,38 +38,29 @@ async def analyze_image(
         Frontend will handle storing results in Firebase
     """
     try:
-        # Read image file
         image_bytes = await image.read()
         
-        # Run both pipelines in parallel for faster execution
         logger.info(f"Starting analysis for patient {patient_id}")
         
-        # Run Glaucoma and DR pipelines in parallel using asyncio.gather()
         glaucoma_result, dr_result = await asyncio.gather(
             glaucoma_pipeline.process(image_bytes, patient_id),
             dr_pipeline.process(image_bytes, patient_id)
         )
         
-        # Prepare GradCAM data
-        # Glaucoma GradCAM returns dict with 'heatmap_only' and 'overlay'
         glaucoma_gradcam_dict = {
             "heatmap_only": glaucoma_result.get("gradcam_heatmap"),
             "overlay": glaucoma_result.get("gradcam_overlay")
         } if glaucoma_result.get("gradcam_heatmap") is not None else None
         
-        # DR GradCAM (placeholder for now)
         dr_gradcam_dict = {
             "heatmap_only": dr_result.get("gradcam_heatmap"),
             "overlay": dr_result.get("gradcam_overlay")
         } if dr_result.get("gradcam_heatmap") is not None else None
         
-        # Generate image_id for Supabase
         image_id = str(uuid.uuid4())
         
-        # Convert images to base64 for immediate display
         original_base64 = base64.b64encode(image_bytes).decode('utf-8')
         
-        # Convert Glaucoma GradCAM to base64
         glaucoma_heatmap_base64 = None
         glaucoma_overlay_base64 = None
         if glaucoma_gradcam_dict and glaucoma_gradcam_dict.get("heatmap_only") is not None:
@@ -79,7 +70,6 @@ async def analyze_image(
                 glaucoma_overlay_bytes = supabase_service._heatmap_to_bytes(glaucoma_gradcam_dict["overlay"])
                 glaucoma_overlay_base64 = base64.b64encode(glaucoma_overlay_bytes).decode('utf-8')
         
-        # Convert DR GradCAM to base64
         dr_heatmap_base64 = None
         dr_overlay_base64 = None
         if dr_gradcam_dict and dr_gradcam_dict.get("heatmap_only") is not None:
@@ -89,11 +79,9 @@ async def analyze_image(
                 dr_overlay_bytes = supabase_service._heatmap_to_bytes(dr_gradcam_dict["overlay"])
                 dr_overlay_base64 = base64.b64encode(dr_overlay_bytes).decode('utf-8')
         
-        # For backward compatibility, use Glaucoma (or DR if Glaucoma not available)
         default_heatmap_base64 = glaucoma_heatmap_base64 or dr_heatmap_base64
         default_overlay_base64 = glaucoma_overlay_base64 or dr_overlay_base64
         
-        # Upload to Supabase in background (non-blocking)
         asyncio.create_task(
             supabase_service.upload_images_async(
                 image_id=image_id,
@@ -104,7 +92,6 @@ async def analyze_image(
             )
         )
         
-        # Return response immediately with base64 images
         return JSONResponse(content={
             "success": True,
             "patient_id": patient_id,
@@ -121,23 +108,18 @@ async def analyze_image(
                 "prediction": dr_result.get("prediction", ""),
                 "raw_output": dr_result.get("raw_output", [])
             },
-            # Base64 images for immediate display
             "image_base64": f"data:image/jpeg;base64,{original_base64}",
-            # Glaucoma images
             "glaucoma_heatmap_base64": f"data:image/jpeg;base64,{glaucoma_heatmap_base64}" if glaucoma_heatmap_base64 else None,
             "glaucoma_overlay_base64": f"data:image/jpeg;base64,{glaucoma_overlay_base64}" if glaucoma_overlay_base64 else None,
-            # DR images
             "dr_heatmap_base64": f"data:image/jpeg;base64,{dr_heatmap_base64}" if dr_heatmap_base64 else None,
             "dr_overlay_base64": f"data:image/jpeg;base64,{dr_overlay_base64}" if dr_overlay_base64 else None,
-            # Backward compatibility
             "heatmap_base64": f"data:image/jpeg;base64,{default_heatmap_base64}" if default_heatmap_base64 else None,
             "overlay_base64": f"data:image/jpeg;base64,{default_overlay_base64}" if default_overlay_base64 else None,
-            # URLs will be available after async upload completes (for history)
-            # These will be null initially but that's OK - history page will fetch from Supabase
+           
             "image_url": None,
             "heatmap_url": None,
             "overlay_url": None,
-            "gradcam_url": None  # For backward compatibility
+            "gradcam_url": None  
         })
         
     except Exception as e:

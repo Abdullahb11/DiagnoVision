@@ -11,11 +11,9 @@ class GlaucomaPreprocessor:
     """Preprocessing pipeline for Glaucoma detection (matching training notebook)"""
     
     def __init__(self):
-        # ImageNet normalization parameters (matching notebook)
         self.imagenet_mean = [0.485, 0.456, 0.406]
         self.imagenet_std = [0.229, 0.224, 0.225]
         
-        # Validation transform (matching notebook - no augmentation for inference)
         self.transform = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
@@ -33,11 +31,9 @@ class GlaucomaPreprocessor:
             Preprocessed image tensor (3, 224, 224) ready for model input
         """
         try:
-            # Convert bytes to PIL Image
             image = Image.open(io.BytesIO(image_bytes))
             image = image.convert('RGB')
             
-            # Apply transforms (resize, to tensor, normalize)
             image_tensor = self.transform(image)
             
             return image_tensor

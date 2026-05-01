@@ -21,20 +21,16 @@ class GlaucomaModel:
         """Load the Glaucoma detection model (PyTorch MobileNetV2)"""
         try:
             if Path(self.model_path).exists():
-                # Load pre-trained MobileNetV2
                 model = models.mobilenet_v2(weights=models.MobileNet_V2_Weights.DEFAULT)
                 
-                # Freeze all layers
                 for param in model.parameters():
                     param.requires_grad = False
                 
-                # Replace final classifier for 2 classes (glaucoma, normal)
                 num_features = model.classifier[1].in_features
                 model.classifier[1] = nn.Linear(num_features, len(self.class_names))
                 
-                # Load trained weights
                 model.load_state_dict(torch.load(self.model_path, map_location=self.device))
-                model.eval()  # Set to evaluation mode
+                model.eval() 
                 model = model.to(self.device)
                 
                 self.model = model
@@ -57,7 +53,6 @@ class GlaucomaModel:
             Prediction result and confidence
         """
         if self.model is None:
-            # Placeholder prediction for development
             logger.warning("Using placeholder prediction - model not loaded")
             return {
                 "prediction": "No signs detected",
@@ -66,24 +61,21 @@ class GlaucomaModel:
             }
         
         try:
-            # Ensure image is on correct device and has batch dimension
             if len(preprocessed_image.shape) == 3:
                 preprocessed_image = preprocessed_image.unsqueeze(0)
             
             preprocessed_image = preprocessed_image.to(self.device)
             
-            # Run prediction
+            
             with torch.no_grad():
                 outputs = self.model(preprocessed_image)
                 probabilities = torch.nn.functional.softmax(outputs, dim=1)
             
-            # Get prediction
             probs = probabilities[0].cpu().numpy()
             pred_idx = np.argmax(probs)
             confidence = float(probs[pred_idx])
             pred_class = self.class_names[pred_idx]
             
-            # Determine result message
             if pred_class == 'glaucoma' and confidence > 0.5:
                 result = "Signs detected"
             else:

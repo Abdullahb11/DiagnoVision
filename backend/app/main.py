@@ -3,14 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.api.routes import router
 
-# Initialize FastAPI app
 app = FastAPI(
     title="DiagnoVision API",
     description="AI-powered eye disease detection API for Glaucoma and Diabetic Retinopathy",
     version="1.0.0"
 )
 
-# CORS middleware to allow frontend requests
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -21,13 +19,12 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://192.168.100.50:5000",
         "http://10.5.70.121:5000"
-    ],  # React dev servers and network IPs
+    ],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include API routes
 app.include_router(router, prefix="/api", tags=["analysis"])
 
 @app.get("/")
