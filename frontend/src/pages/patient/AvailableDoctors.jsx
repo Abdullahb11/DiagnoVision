@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Layout from '../../components/Layout'
 import { 
-  Users, Search, Star, MapPin, Clock, 
-  MessageSquare, UserPlus, Filter, Award
+  Users, Search, Clock, 
+  MessageSquare, UserPlus, Filter
 } from 'lucide-react'
-import { addDoc, doc, collection, getDocs, getDoc, setDoc, serverTimestamp, query, where } from 'firebase/firestore'
+import { addDoc, doc, collection, onSnapshot, setDoc, serverTimestamp, query, where } from 'firebase/firestore'
 import { db } from '../../config/firebase'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -15,59 +15,62 @@ const AvailableDoctors = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [connectLoadingId, setConnectLoadingId] = useState('')
+  const [excludedDoctorIds, setExcludedDoctorIds] = useState(new Set())
+  const [onlineDoctorIds, setOnlineDoctorIds] = useState(new Set())
 
   useEffect(() => {
-    const fetchDoctors = async () => {
-      try {
-        // Exclude only doctors with active or requested links.
-        // If a prior request was declined/rejected, show doctor again.
-        let exclude = new Set()
-        if (currentUser) {
-          const relQuery = query(
-            collection(db, 'patient_doctor'),
-            where('patientId', '==', currentUser.uid)
-          )
-          const relSnap = await getDocs(relQuery)
-          exclude = new Set(
-            relSnap.docs
-              .map((d) => d.data() || {})
-              .filter((rel) => ['active', 'requested', 'pending'].includes(String(rel.status || '').toLowerCase()))
-              .map((rel) => rel.doctorId)
-              .filter(Boolean)
-          )
+    const unsubDoctor = onSnapshot(collection(db, 'doctor'), (snap) => {
+      const rows = snap.docs.map((docSnap) => {
+        const data = docSnap.data() || {}
+        return {
+          id: docSnap.id,
+          name: data.name || 'Unknown Doctor',
+          specialty: data.qualification || 'Eye Specialist',
+          licenseNo: data.licenseNo || 'Not provided',
         }
+      })
+      setDoctors(rows)
+      setLoading(false)
+    }, (err) => {
+      console.error('Error fetching doctors:', err)
+      setError('Failed to load doctors. Please try again later.')
+      setLoading(false)
+    })
 
-        const querySnapshot = await getDocs(collection(db, 'doctor'))
-        const fetched = querySnapshot.docs
-          .filter((docSnap) => {
-            const doctorId = docSnap.id
-            return !exclude.has(doctorId)
-          })
-          .map((docSnap) => {
-          const data = docSnap.data()
-          return {
-            id: docSnap.id,
-            name: data.name || 'Unknown Doctor',
-            specialty: data.qualification || 'Eye Specialist',
-            licenseNo: data.licenseNo || 'Not provided',
-            // Placeholder fields until we implement real values
-            rating: data.rating ?? 5.0,
-            reviews: data.reviewsCount ?? 0,
-            experience: data.experience || '—',
-            location: data.location || 'Online',
-            availability: data.availability || 'Available',
-          }
-        })
-        setDoctors(fetched)
-      } catch (err) {
-        console.error('Error fetching doctors:', err)
-        setError('Failed to load doctors. Please try again later.')
-      } finally {
-        setLoading(false)
-      }
+    const presenceQ = query(
+      collection(db, 'user_presence'),
+      where('role', '==', 'doctor'),
+      where('isOnline', '==', true)
+    )
+    const unsubPresence = onSnapshot(presenceQ, (snap) => {
+      setOnlineDoctorIds(new Set(snap.docs.map((d) => d.id)))
+    })
+
+    let unsubRel = () => {}
+    if (currentUser) {
+      const relQuery = query(
+        collection(db, 'patient_doctor'),
+        where('patientId', '==', currentUser.uid)
+      )
+      unsubRel = onSnapshot(relQuery, (relSnap) => {
+        const exclude = new Set(
+          relSnap.docs
+            .map((d) => d.data() || {})
+            .filter((rel) => ['active', 'requested', 'pending'].includes(String(rel.status || '').toLowerCase()))
+            .map((rel) => rel.doctorId)
+            .filter(Boolean)
+        )
+        setExcludedDoctorIds(exclude)
+      })
+    } else {
+      setExcludedDoctorIds(new Set())
     }
 
-    fetchDoctors()
+    return () => {
+      unsubDoctor()
+      unsubPresence()
+      unsubRel()
+    }
   }, [currentUser])
 
   const handleConnect = async (doctorId) => {
@@ -136,10 +139,6 @@ const AvailableDoctors = () => {
               </div>
             </div>
             
-            <button className="btn-secondary flex items-center gap-2">
-              <Filter className="w-4 h-4" />
-              Filters
-            </button>
           </div>
         </motion.div>
 
@@ -169,13 +168,13 @@ const AvailableDoctors = () => {
           <div className="glass-card p-6 text-center text-dark-400">
             Loading doctors...
           </div>
-        ) : doctors.length === 0 ? (
+        ) : doctors.filter((d) => !excludedDoctorIds.has(d.id)).length === 0 ? (
           <div className="glass-card p-6 text-center text-dark-400">
             No doctors available yet. Doctors will appear here once they sign up.
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-            {doctors.map((doctor, index) => (
+            {doctors.filter((d) => !excludedDoctorIds.has(d.id)).map((doctor, index) => (
             <motion.div
               key={doctor.id}
               initial={{ opacity: 0, y: 20 }}
@@ -193,26 +192,15 @@ const AvailableDoctors = () => {
                   <h3 className="text-lg font-semibold text-white truncate">{doctor.name}</h3>
                   <p className="text-primary-400 text-sm">{doctor.specialty}</p>
                   <p className="text-dark-400 text-xs mt-1">License: {doctor.licenseNo}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                    <span className="text-white font-medium">{doctor.rating}</span>
-                    <span className="text-dark-500 text-sm">({doctor.reviews} reviews)</span>
-                  </div>
                 </div>
               </div>
 
               <div className="space-y-2 mb-4">
-                <div className="flex items-center gap-2 text-sm text-dark-400">
-                  <Award className="w-4 h-4" />
-                  <span>{doctor.experience} experience</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-dark-400">
-                  <MapPin className="w-4 h-4" />
-                  <span>{doctor.location}</span>
-                </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="w-4 h-4 text-accent-400" />
-                  <span className="text-accent-400">{doctor.availability}</span>
+                  <span className={onlineDoctorIds.has(doctor.id) ? 'text-accent-400' : 'text-dark-400'}>
+                    {onlineDoctorIds.has(doctor.id) ? 'Online' : 'Offline'}
+                  </span>
                 </div>
               </div>
 

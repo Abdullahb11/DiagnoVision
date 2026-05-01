@@ -6,7 +6,7 @@ import {
   updateProfile,
   onAuthStateChanged
 } from 'firebase/auth'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../config/firebase'
 
 const AuthContext = createContext({})
@@ -44,7 +44,23 @@ export const AuthProvider = ({ children }) => {
       setLoading(false)
       return
     }
+    let previousUid = null
+    let heartbeat = null
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (heartbeat) {
+        clearInterval(heartbeat)
+        heartbeat = null
+      }
+
+      if (previousUid && (!user || user.uid !== previousUid)) {
+        await setDoc(
+          doc(db, 'user_presence', previousUid),
+          { isOnline: false, lastActive: serverTimestamp() },
+          { merge: true }
+        ).catch(() => {})
+      }
+
       setCurrentUser(user)
       if (user) {
         // Fetch role from Firestore
@@ -57,6 +73,25 @@ export const AuthProvider = ({ children }) => {
             console.log('User data:', userData)
             console.log('User role:', userData.role)
             setUserRole(userData.role || null)
+            await setDoc(
+              doc(db, 'user_presence', user.uid),
+              {
+                userId: user.uid,
+                role: userData.role || '',
+                name: user.displayName || '',
+                isOnline: true,
+                lastActive: serverTimestamp(),
+              },
+              { merge: true }
+            )
+            heartbeat = setInterval(() => {
+              setDoc(
+                doc(db, 'user_presence', user.uid),
+                { isOnline: true, lastActive: serverTimestamp() },
+                { merge: true }
+              ).catch(() => {})
+            }, 30000)
+            previousUid = user.uid
           } else {
             console.warn('User document not found in Firestore for UID:', user.uid)
             setUserRole(null)
@@ -72,10 +107,13 @@ export const AuthProvider = ({ children }) => {
       setLoading(false)
     })
 
-    return unsubscribe
+    return () => {
+      if (heartbeat) clearInterval(heartbeat)
+      unsubscribe()
+    }
   }, [])
 
-  const signup = async (email, password, displayName, role, licenseNo, specialty) => {
+  const signup = async (email, password, displayName, role, licenseNo, specialty, age) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
@@ -97,7 +135,7 @@ export const AuthProvider = ({ children }) => {
           await setDoc(doc(db, 'patient', user.uid), {
             user_id: user.uid,
             name: displayName,
-            age: '',
+            age: age || '',
             gender: '',
             doctorId: '',
             contactNo: ''
@@ -138,6 +176,14 @@ export const AuthProvider = ({ children }) => {
         throw new Error('Firebase auth is not initialized')
       }
       
+      if (auth.currentUser?.uid) {
+        await setDoc(
+          doc(db, 'user_presence', auth.currentUser.uid),
+          { isOnline: false, lastActive: serverTimestamp() },
+          { merge: true }
+        ).catch(() => {})
+      }
+
       // Clear user state first
       setCurrentUser(null)
       setUserRole(null)

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import Layout from '../../components/Layout'
 import { useAuth } from '../../contexts/AuthContext'
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import { collection, getDocs, query, where, onSnapshot } from 'firebase/firestore'
 import { db } from '../../config/firebase'
 import { 
   ScanEye, History, Users, MessageSquare, 
@@ -15,12 +15,48 @@ const PatientDashboard = () => {
   const { currentUser } = useAuth()
   const [recentScans, setRecentScans] = useState([])
   const [totalScans, setTotalScans] = useState(0)
+  const [myDoctorsCount, setMyDoctorsCount] = useState(0)
+  const [messagesCount, setMessagesCount] = useState(0)
   const [loading, setLoading] = useState(true)
   
   useEffect(() => {
     if (currentUser) {
       fetchRecentScans()
     }
+  }, [currentUser])
+
+  useEffect(() => {
+    if (!currentUser) {
+      setMyDoctorsCount(0)
+      return
+    }
+    const q = query(
+      collection(db, 'patient_doctor'),
+      where('patientId', '==', currentUser.uid),
+      where('status', '==', 'active')
+    )
+    const unsub = onSnapshot(q, (snap) => setMyDoctorsCount(snap.size))
+    return () => unsub()
+  }, [currentUser])
+
+  useEffect(() => {
+    if (!currentUser) {
+      setMessagesCount(0)
+      return
+    }
+    const q = query(
+      collection(db, 'messages'),
+      where('patientId', '==', currentUser.uid),
+      where('sent_by_patient', '==', false)
+    )
+    const unsub = onSnapshot(q, (snap) => {
+      const unread = snap.docs.filter((d) => {
+        const x = d.data() || {}
+        return x.read_by_patient !== true
+      })
+      setMessagesCount(unread.length)
+    })
+    return () => unsub()
   }, [currentUser])
 
   const fetchRecentScans = async () => {
@@ -93,7 +129,7 @@ const PatientDashboard = () => {
     },
     { 
       label: 'My Doctors', 
-      value: '3', 
+      value: String(myDoctorsCount), 
       icon: Users,
       color: 'from-purple-500 to-purple-600',
       bgColor: 'bg-purple-500/10',
@@ -101,7 +137,7 @@ const PatientDashboard = () => {
     },
     { 
       label: 'Messages', 
-      value: '5', 
+      value: String(messagesCount), 
       icon: MessageSquare,
       color: 'from-orange-500 to-orange-600',
       bgColor: 'bg-orange-500/10',

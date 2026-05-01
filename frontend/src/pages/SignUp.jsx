@@ -9,6 +9,7 @@ const SignUp = () => {
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [role, setRole] = useState('')
+  const [age, setAge] = useState('')
   const [licenseNo, setLicenseNo] = useState('')
   const [specialty, setSpecialty] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -36,8 +37,13 @@ const SignUp = () => {
       return
     }
 
+    if (role === 'patient' && !String(age).trim()) {
+      setError('Please enter your age')
+      return
+    }
+
     setLoading(true)
-    const result = await signup(email, password, displayName, role, licenseNo, specialty)
+    const result = await signup(email, password, displayName, role, licenseNo, specialty, age)
     
     if (result.success) {
       navigate('/signin')
@@ -236,6 +242,27 @@ const SignUp = () => {
                     </div>
                   </div>
                 </>
+              )}
+
+              {role === 'patient' && (
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">
+                    Age
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" />
+                    <input
+                      type="number"
+                      min="1"
+                      max="120"
+                      value={age}
+                      onChange={(e) => setAge(e.target.value)}
+                      className="input-field pl-12"
+                      placeholder="Enter your age"
+                      required
+                    />
+                  </div>
+                </div>
               )}
 
               <div>

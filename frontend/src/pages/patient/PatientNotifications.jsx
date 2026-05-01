@@ -34,7 +34,11 @@ const PatientNotifications = () => {
             createdAt: data.createdAt || null
           }
         })
-        setNotifications(rows)
+        //notifications should be unique based on message and title
+        const uniqueRows=rows.filter((row, index, self) =>
+          index === self.findIndex((t) => t.message === row.message && t.title === row.title)
+        )
+        setNotifications(uniqueRows)
       } catch (err) {
         console.error('Error fetching patient notifications:', err)
         setError('Failed to load notifications.')

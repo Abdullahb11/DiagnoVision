@@ -168,6 +168,18 @@ const DoctorNotifications = () => {
     }
   }
 
+  const markNotificationRead = async (notificationId) => {
+    if (!notificationId) return
+    try {
+      await updateDoc(doc(db, 'notifications', notificationId), { read: true })
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
+      )
+    } catch (err) {
+      console.error('Failed to mark notification read:', err)
+    }
+  }
+
   return (
     <Layout>
       <div className="space-y-8">
@@ -261,6 +273,7 @@ const DoctorNotifications = () => {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn-secondary inline-flex items-center gap-2 text-sm py-2 px-4"
+                          onClick={() => markNotificationRead(notification.id)}
                         >
                           <ExternalLink className="w-4 h-4" />
                           View PDF
@@ -269,6 +282,7 @@ const DoctorNotifications = () => {
                           href={notification.pdfUrl}
                           download={`scan-report-${notification.data?.image_id || notification.id}.pdf`}
                           className="btn-primary inline-flex items-center gap-2 text-sm py-2 px-4"
+                          onClick={() => markNotificationRead(notification.id)}
                         >
                           <Download className="w-4 h-4" />
                           Download

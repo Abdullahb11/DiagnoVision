@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import Layout from '../../components/Layout'
 import { 
-  UserCheck, MessageSquare, Calendar, Star, 
+  UserCheck, MessageSquare, 
   ChevronRight
 } from 'lucide-react'
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore'
@@ -40,7 +41,6 @@ const MyDoctors = () => {
               id: doctorId,
               name: data.name || 'Unknown Doctor',
               specialty: data.qualification || 'Eye Specialist',
-              rating: data.rating ?? 5.0,
               status: 'active',
             }
           })
@@ -104,27 +104,19 @@ const MyDoctors = () => {
                   </span>
                 </div>
                 <div className="flex-1">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-white">{doctor.name}</h3>
-                      <p className="text-primary-400 text-sm">{doctor.specialty}</p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                      <span className="text-white font-medium">{doctor.rating}</span>
-                    </div>
-                  </div>
+                  <h3 className="text-lg font-semibold text-white">{doctor.name}</h3>
+                  <p className="text-primary-400 text-sm">{doctor.specialty}</p>
                 </div>
               </div>
 
               <div className="flex gap-3">
-                <button className="flex-1 btn-secondary flex items-center justify-center gap-2 py-2">
+                <Link
+                  to={`/patient/messages?doctorId=${doctor.id}`}
+                  className="flex-1 btn-secondary flex items-center justify-center gap-2 py-2"
+                >
                   <MessageSquare className="w-4 h-4" />
                   Message
-                </button>
-                <button className="p-2 btn-primary">
-                  <Calendar className="w-5 h-5" />
-                </button>
+                </Link>
               </div>
             </motion.div>
             ))}
