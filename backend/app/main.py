@@ -2,6 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.api.routes import router
+import torch
+import gc
+
+# Render Free Tier Memory Optimizations
+torch.set_num_threads(1)
 
 app = FastAPI(
     title="DiagnoVision API",
