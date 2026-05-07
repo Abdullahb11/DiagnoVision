@@ -10,9 +10,8 @@ class DRPipeline:
     """Complete pipeline for Diabetic Retinopathy detection"""
     
     def __init__(self):
-        self.model = DRModel(settings.DR_MODEL_PATH)
-        self.preprocessor = DRPreprocessor()
-        self.gradcam = DRGradCAM(self.model.model)
+        # We delay initialization to the process() method for Render Free Tier RAM limits
+        pass
     
     async def process(self, image_bytes: bytes, patient_id: str):
         """
@@ -26,7 +25,13 @@ class DRPipeline:
             Dictionary with result message, confidence, and GradCAM image
         """
         try:
+            import gc
             logger.info(f"Starting DR pipeline for patient {patient_id}")
+            
+            # Lazy load models to fit in 512MB RAM
+            self.model = DRModel(settings.DR_MODEL_PATH)
+            self.preprocessor = DRPreprocessor()
+            self.gradcam = DRGradCAM(self.model.model)
             
             preprocessed_image = self.preprocessor.preprocess(image_bytes)
             logger.debug("Image preprocessed for DR model")
@@ -41,6 +46,12 @@ class DRPipeline:
             
             
             result_msg = self._format_result_message(prediction)
+            
+            # Clean up memory immediately to survive 512MB limit
+            del self.gradcam
+            del self.preprocessor
+            del self.model
+            gc.collect()
             
             return {
                 "result_msg": result_msg,
