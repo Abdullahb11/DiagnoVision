@@ -16,19 +16,25 @@ class FirebaseService:
         self.db = None
         try:
             if not firebase_admin._apps:
-                firebase_key_path = settings.FIREBASE_SERVICE_ACCOUNT_KEY_PATH
-                if firebase_key_path and os.path.exists(firebase_key_path):
-                    cred = credentials.Certificate(firebase_key_path)
+                import json
+                # First try loading from a JSON string in Environment Variable (for secure Public cloud deployment)
+                firebase_json_env = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+                if firebase_json_env:
+                    cred_dict = json.loads(firebase_json_env)
+                    cred = credentials.Certificate(cred_dict)
                     firebase_admin.initialize_app(cred)
-                    logger.info("Firebase Admin initialized successfully")
+                    logger.info("Firebase Admin initialized successfully from Environment Variable")
                 else:
-                    logger.warning(
-                        "Firebase service account key missing — Firestore disabled. "
-                        "Download JSON from Firebase Console → Project settings → Service accounts → "
-                        "Generate new private key, save as backend/firebase-service-account.json "
-                        "(or set FIREBASE_SERVICE_ACCOUNT_KEY_PATH). Path checked: %s",
-                        firebase_key_path or "(not set)",
-                    )
+                    # Fallback to local file path
+                    firebase_key_path = settings.FIREBASE_SERVICE_ACCOUNT_KEY_PATH
+                    if firebase_key_path and os.path.exists(firebase_key_path):
+                        cred = credentials.Certificate(firebase_key_path)
+                        firebase_admin.initialize_app(cred)
+                        logger.info("Firebase Admin initialized successfully from file path")
+                    else:
+                        logger.warning(
+                            "Firebase service account key missing — Firestore disabled. "
+                        )
             if firebase_admin._apps:
                 self.db = firestore.client()
             else:
