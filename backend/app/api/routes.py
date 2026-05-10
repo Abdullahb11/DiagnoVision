@@ -42,14 +42,11 @@ async def analyze_image(
         
         logger.info(f"Starting analysis for patient {patient_id}")
         
-        # Run sequentially instead of asyncio.gather to prevent massive RAM spikes
-        glaucoma_result = await glaucoma_pipeline.process(image_bytes, patient_id)
-        
-        # Force garbage collection between models
-        import gc
-        gc.collect()
-        
-        dr_result = await dr_pipeline.process(image_bytes, patient_id)
+        # Run both models in PARALLEL — safe on Hugging Face (16GB RAM)
+        glaucoma_result, dr_result = await asyncio.gather(
+            glaucoma_pipeline.process(image_bytes, patient_id),
+            dr_pipeline.process(image_bytes, patient_id)
+        )
         
         glaucoma_gradcam_dict = {
             "heatmap_only": glaucoma_result.get("gradcam_heatmap"),

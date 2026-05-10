@@ -10,8 +10,9 @@ class GlaucomaPipeline:
     """Complete pipeline for Glaucoma detection"""
     
     def __init__(self):
-        # We delay initialization to the process() method for Render Free Tier RAM limits
-        pass
+        self.model = GlaucomaModel(settings.GLAUCOMA_MODEL_PATH)
+        self.preprocessor = GlaucomaPreprocessor()
+        self.gradcam = GlaucomaGradCAM(self.model.model)
     
     async def process(self, image_bytes: bytes, patient_id: str):
         """
@@ -25,13 +26,7 @@ class GlaucomaPipeline:
             Dictionary with result message, confidence, and GradCAM image
         """
         try:
-            import gc
             logger.info(f"Starting Glaucoma pipeline for patient {patient_id}")
-            
-            # Lazy load models to fit in 512MB RAM
-            self.model = GlaucomaModel(settings.GLAUCOMA_MODEL_PATH)
-            self.preprocessor = GlaucomaPreprocessor()
-            self.gradcam = GlaucomaGradCAM(self.model.model)
             
             preprocessed_image = self.preprocessor.preprocess(image_bytes)
             logger.debug("Image preprocessed for Glaucoma model")
@@ -44,12 +39,6 @@ class GlaucomaPipeline:
             logger.debug("GradCAM generated for Glaucoma")
             
             result_msg = self._format_result_message(prediction)
-            
-            # Clean up memory immediately to survive 512MB limit
-            del self.gradcam
-            del self.preprocessor
-            del self.model
-            gc.collect()
             
             return {
                 "result_msg": result_msg,
